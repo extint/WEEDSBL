@@ -1,0 +1,10 @@
+data_root: ./datasets/condensed_weed
+in_channels: 4
+height: 960
+width: 1280
+batch_size: 8
+epochs: 30
+lr: 0.001
+num_workers: 4
+ckpt_dir: ./checkpoints
+mixed_precision: false

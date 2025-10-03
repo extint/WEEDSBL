@@ -6,6 +6,7 @@ import torch
 import matplotlib.pyplot as plt
 import yaml
 from datetime import datetime
+import random
 
 def load_config(config_path):
     """Load configuration from YAML file"""
@@ -154,8 +155,8 @@ def visualize_results(rgb, nir, pred_mask, gt_mask, model_name, training_params,
     print(f"Visualization saved to: {save_path}")
     plt.close()
 
-def run_inference(model, config, device="cuda"):
-    """Run inference using configuration"""
+def run_inference(model, config, device="cuda", nir_drop=False):
+    """Run inference using configuration, with optional NIR zero-out probability p"""
     device = torch.device(device if torch.cuda.is_available() else "cpu")
     model.to(device)
     
@@ -181,6 +182,12 @@ def run_inference(model, config, device="cuda"):
     target_hw = tuple(config['inference'].get('target_size', [960, 1280]))
     
     x, rgb, nir_img = preprocess_rgbnir(bgr, nir_path, target_hw=target_hw)
+    
+    # Zero out NIR channel with probability p
+    if nir_drop:
+        x[:, 3, :, :] = 0.0  # Zero out NIR channel (channel index 3)
+        nir_img = np.zeros_like(nir_img)
+    
     x = x.to(device)
     
     with torch.no_grad():
@@ -224,7 +231,7 @@ def main():
     
     # Run inference
     device = config['inference'].get('device', 'cuda')
-    out_path = run_inference(model, config, device=device)
+    out_path = run_inference(model, config, device=device, nir_drop=True)
     
     print("Inference complete!")
 

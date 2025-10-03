@@ -74,7 +74,8 @@ def main():
         use_rgbnir=True if config["in_channels"] == 4 else False,
         batch_size=config["batch_size"],
         num_workers=config["num_workers"],
-        target_size=(config["height"], config["width"])
+        target_size=(config["height"], config["width"]),
+        nir_drop_prob=config["nir_dropout_prob"]
     )
     model = UNet(in_channels=config["in_channels"], base_ch=4, out_channels=1)
 
@@ -99,7 +100,7 @@ def main():
         writer.add_scalar("F1/val", metrics["F1"], epoch)
 
         # Save best
-        if metrics["mIoU"] > best_miou:
+        if metrics["mIoU"] >= best_miou:
             best_miou = metrics["mIoU"]
             ckpt_path = os.path.join(config["ckpt_dir"], f"{type(model).__name__}_{config['in_channels']}ch_best.pth")
             torch.save({"model": model.state_dict(),

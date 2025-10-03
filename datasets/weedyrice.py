@@ -6,6 +6,7 @@ import cv2
 import torch
 from torch.utils.data import Dataset, DataLoader
 import albumentations as A
+import random
 
 def _read_split_list(meta_dir: str, split: str) -> Optional[List[str]]:
     split_file = os.path.join(meta_dir, f"{split}.txt")
@@ -71,7 +72,8 @@ class WeedyRiceRGBNIRDataset(Dataset):
         split: str = "train",
         target_size: Tuple[int, int] = (960, 1280),
         use_rgbnir: bool = True,  # True: RGB+NIR (4ch), False: RGB (3ch)
-        augment: bool = True
+        augment: bool = True,
+        nir_drop_prob: float = 0.0
     ):
         self.root = root
         self.split = split
@@ -85,6 +87,7 @@ class WeedyRiceRGBNIRDataset(Dataset):
         self.meta_dir = os.path.join(root, "Metadata")
         
         self.orig2std, self.std2orig = _load_filename_mapping(self.meta_dir)
+        self.nir_drop_prob = nir_drop_prob
         
         # Build file list from split or from RGB dir
         split_list = _read_split_list(self.meta_dir, split)
@@ -272,10 +275,12 @@ class WeedyRiceRGBNIRDataset(Dataset):
         # Normalize
         rgb = self._scale_uint(rgb)
         rgb = (rgb - self.rgb_mean) / self.rgb_std
-        
         if self.use_rgbnir and nir is not None:
-            # Normalize NIR and stack
-            nir = self._scale_uint(nir)
+            if self.nir_drop_prob > 0.0 and random.random() < self.nir_drop_prob:
+                nir = np.zeros_like(nir)
+            else:
+                # Normalize NIR and stack
+                nir = self._scale_uint(nir)
             x = np.concatenate([rgb, nir[..., None]], axis=-1)  # (H, W, 4)
         else:
             x = rgb  # (H, W, 3)
@@ -291,14 +296,15 @@ def create_weedy_rice_rgbnir_dataloaders(
     batch_size: int = 4,
     num_workers: int = 4,
     use_rgbnir: bool = True,  # True: RGB+NIR (4ch), False: RGB (3ch)
-    target_size: Tuple[int, int] = (960, 1280)
+    target_size: Tuple[int, int] = (960, 1280),
+    nir_drop_prob: float = 0.0
 ) -> Tuple[DataLoader, DataLoader, DataLoader]:
     train_ds = WeedyRiceRGBNIRDataset(data_root, split="train", use_rgbnir=use_rgbnir, 
-                                     target_size=target_size, augment=True)
+                                     target_size=target_size, augment=True, nir_drop_prob=nir_drop_prob)
     val_ds = WeedyRiceRGBNIRDataset(data_root, split="val", use_rgbnir=use_rgbnir, 
-                                   target_size=target_size, augment=False)
+                                   target_size=target_size, augment=False, nir_drop_prob=nir_drop_prob)
     test_ds = WeedyRiceRGBNIRDataset(data_root, split="test", use_rgbnir=use_rgbnir, 
-                                    target_size=target_size, augment=False)
+                                    target_size=target_size, augment=False, nir_drop_prob=nir_drop_prob)
     
     train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, 
                              num_workers=num_workers, pin_memory=True)

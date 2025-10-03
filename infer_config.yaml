@@ -12,3 +12,4 @@ inference:
   target_size: [960, 1280]
   threshold: 0.5
   device: cuda
+  nir_drop: True

@@ -169,11 +169,32 @@ def run_inference(model, config, device="cuda", nir_drop=False):
     
     # Extract training parameters
     training_params = extract_training_params(ckpt_path)
-    
-    # Load images
-    img_path = config['inference']['rgb_image_path']
-    nir_path = config['inference']['nir_image_path']
-    
+    img_path = None
+    nir_path = None
+    gt_path = None
+    # --- Random sample support ---
+    if config['inference'].get('use_random', False):
+        data_root = config['inference']['data_root']
+        rgb_dir = os.path.join(data_root, "RGB")
+        nir_dir = os.path.join(data_root, "Multispectral")
+        mask_dir = os.path.join(data_root, "Masks")
+
+        rgb_files = [f for f in os.listdir(rgb_dir) if f.lower().endswith(('.jpg', '.jpeg'))]
+        if not rgb_files:
+            raise RuntimeError(f"No RGB images found in {rgb_dir}")
+
+        chosen = random.choice(rgb_files)
+        base_name, _ = os.path.splitext(chosen)
+
+        img_path = os.path.join(rgb_dir, chosen)
+        nir_path = os.path.join(nir_dir, base_name + "_NIR.TIF")   # adjust suffix if needed
+        gt_path  = os.path.join(mask_dir, base_name + ".png")      # adjust extension if needed
+    else:
+        img_path = config['inference']['rgb_image_path']
+        nir_path = config['inference']['nir_image_path']
+        gt_path  = config['inference'].get('ground_truth_path', None)
+    # -----------------------------
+
     bgr = cv2.imread(img_path, cv2.IMREAD_COLOR)
     if bgr is None:
         raise FileNotFoundError(f"RGB image not found: {img_path}")
@@ -203,10 +224,7 @@ def run_inference(model, config, device="cuda", nir_drop=False):
     os.makedirs(os.path.dirname(out_path) if os.path.dirname(out_path) else '.', exist_ok=True)
     cv2.imwrite(out_path, mask)
     print(f"Saved mask: {out_path}")
-    
-    # Load ground truth if path provided
-    gt_mask = None
-    gt_path = config['inference'].get('ground_truth_path', None)
+
     if gt_path:
         gt_mask = load_ground_truth(gt_path, target_hw=target_hw)
     

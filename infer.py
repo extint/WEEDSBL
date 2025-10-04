@@ -220,7 +220,7 @@ def run_inference(model, config, device="cuda", nir_drop=False):
     mask = (probs > threshold).astype(np.uint8) * 255
     
     # Save output mask
-    out_path = config['inference']['output_path'] + f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.png"
+    out_path = config['inference']['output_path'] + f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}_{config['model']['type']}_{'droppedNIR' if config['inference']['nir_drop'] else 'withNIR'}.png"
     os.makedirs(os.path.dirname(out_path) if os.path.dirname(out_path) else '.', exist_ok=True)
     cv2.imwrite(out_path, mask)
     print(f"Saved mask: {out_path}")

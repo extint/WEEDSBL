@@ -229,7 +229,7 @@ def run_inference(model, config, device="cuda", nir_drop=False):
         gt_mask = load_ground_truth(gt_path, target_hw=target_hw)
     
     # Get model name
-    model_name = f"UNet (in_ch={config['model']['in_channels']}, base_ch={config['model']['base_channels']})"
+    model_name = f"{type(model).__name__} (in_ch={config['model']['in_channels']}, base_ch={config['model']['base_channels']})"
     
     # Create visualization
     viz_path = out_path.replace('.png', '_visualization.png')

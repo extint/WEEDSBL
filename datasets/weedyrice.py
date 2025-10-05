@@ -63,15 +63,43 @@ def _load_nir_band(ms_dir: str, rgb_name: str, use_standardized: bool,
                 return std_candidate
     return None
 
+def compute_ndvi(rgb: np.ndarray, nir: np.ndarray) -> np.ndarray:
+    """
+    Compute NDVI from RGB and NIR channels.
+    
+    Args:
+        rgb: RGB image, shape (H, W, 3), values in [0, 1]
+        nir: NIR channel, shape (H, W), values in [0, 1]
+    
+    Returns:
+        NDVI array in range [-1, 1], shape (H, W)
+    """
+    # Extract red channel (index 0 in RGB format)
+    red = rgb[:, :, 0]
+    
+    # Compute NDVI = (NIR - Red) / (NIR + Red)
+    numerator = nir - red
+    denominator = nir + red
+    
+    # Avoid division by zero
+    epsilon = 1e-8
+    ndvi = np.divide(numerator, denominator + epsilon)
+    
+    # Clip to valid NDVI range [-1, 1]
+    ndvi = np.clip(ndvi, -1.0, 1.0)
+    
+    return ndvi
+
 class WeedyRiceRGBNIRDataset(Dataset):
-    """4-channel RGB+NIR dataset loader for rice weed segmentation"""
+    """4-channel RGB+NIR/NDVI dataset loader for rice weed segmentation"""
     
     def __init__(
         self,
         root: str,
         split: str = "train",
         target_size: Tuple[int, int] = (960, 1280),
-        use_rgbnir: bool = True,  # True: RGB+NIR (4ch), False: RGB (3ch)
+        use_rgbnir: bool = True,  # True: RGB+NIR/NDVI (4ch), False: RGB (3ch)
+        use_ndvi: bool = False,   # True: compute NDVI instead of raw NIR
         augment: bool = True,
         nir_drop_prob: float = 0.0
     ):
@@ -79,6 +107,7 @@ class WeedyRiceRGBNIRDataset(Dataset):
         self.split = split
         self.target_h, self.target_w = target_size
         self.use_rgbnir = use_rgbnir
+        self.use_ndvi = use_ndvi
         self.augment = augment and split == "train"
         
         self.rgb_dir = os.path.join(root, "RGB")
@@ -172,7 +201,7 @@ class WeedyRiceRGBNIRDataset(Dataset):
                     if os.path.exists(cand):
                         mask_path = cand
             
-            # Find NIR band if needed
+            # Find NIR band if needed (required for both NIR and NDVI modes)
             nir_path = None
             if self.use_rgbnir:
                 nir_path = _load_nir_band(
@@ -180,7 +209,7 @@ class WeedyRiceRGBNIRDataset(Dataset):
                     self.orig2std, self.std2orig
                 )
             
-            # Keep sample if mask exists and (if RGB+NIR) NIR exists
+            # Keep sample if mask exists and (if RGB+NIR/NDVI) NIR exists
             if mask_path is not None and (not self.use_rgbnir or nir_path is not None):
                 samples.append({
                     "rgb": rgb_path,
@@ -226,7 +255,7 @@ class WeedyRiceRGBNIRDataset(Dataset):
         rgb = self._read_rgb(item["rgb"])
         mask = self._read_mask(item["mask"])
         
-        # Read NIR if using RGB+NIR
+        # Read NIR if using RGB+NIR/NDVI
         nir = None
         if self.use_rgbnir and item["nir"] is not None:
             nir = self._read_nir(item["nir"])
@@ -272,18 +301,37 @@ class WeedyRiceRGBNIRDataset(Dataset):
                 aug = self.noise_aug(image=rgb)
                 rgb = aug["image"]
         
-        # Normalize
-        rgb = self._scale_uint(rgb)
-        rgb = (rgb - self.rgb_mean) / self.rgb_std
+        # Normalize RGB first (needed for NDVI computation)
+        rgb_scaled = self._scale_uint(rgb)
+        
+        # Process 4th channel: NIR or NDVI
         if self.use_rgbnir and nir is not None:
+            # Check for NIR drop
             if self.nir_drop_prob > 0.0 and random.random() <= self.nir_drop_prob:
-                nir = np.zeros_like(nir)
+                fourth_channel = np.zeros_like(nir, dtype=np.float32)
             else:
-                # Normalize NIR and stack
-                nir = self._scale_uint(nir)
-            x = np.concatenate([rgb, nir[..., None]], axis=-1)  # (H, W, 4)
+                # Scale NIR to [0, 1]
+                nir_scaled = self._scale_uint(nir)
+                
+                # Compute NDVI if requested
+                if self.use_ndvi:
+                    # Compute NDVI from scaled RGB and NIR
+                    ndvi = compute_ndvi(rgb_scaled, nir_scaled)
+                    # Scale NDVI from [-1, 1] to [0, 1] for consistency
+                    fourth_channel = (ndvi + 1.0) / 2.0
+                else:
+                    # Use raw NIR
+                    fourth_channel = nir_scaled
+            
+            # Apply ImageNet normalization to RGB
+            rgb_normalized = (rgb_scaled - self.rgb_mean) / self.rgb_std
+            
+            # Stack RGB + NIR/NDVI
+            x = np.concatenate([rgb_normalized, fourth_channel[..., None]], axis=-1)  # (H, W, 4)
         else:
-            x = rgb  # (H, W, 3)
+            # RGB only mode
+            rgb_normalized = (rgb_scaled - self.rgb_mean) / self.rgb_std
+            x = rgb_normalized  # (H, W, 3)
         
         # To tensors (C, H, W)
         x = torch.from_numpy(x.transpose(2, 0, 1)).float()
@@ -295,17 +343,42 @@ def create_weedy_rice_rgbnir_dataloaders(
     data_root: str,
     batch_size: int = 4,
     num_workers: int = 4,
-    use_rgbnir: bool = True,  # True: RGB+NIR (4ch), False: RGB (3ch)
+    use_rgbnir: bool = True,  # True: RGB+NIR/NDVI (4ch), False: RGB (3ch)
+    use_ndvi: bool = False,   # True: compute NDVI instead of raw NIR
     target_size: Tuple[int, int] = (960, 1280),
     nir_drop_prob: float = 0.0,
     test_on_rgb_only: bool = False
 ) -> Tuple[DataLoader, DataLoader, DataLoader]:
-    train_ds = WeedyRiceRGBNIRDataset(data_root, split="train", use_rgbnir=use_rgbnir, 
-                                     target_size=target_size, augment=True, nir_drop_prob=nir_drop_prob)
-    val_ds = WeedyRiceRGBNIRDataset(data_root, split="val", use_rgbnir=use_rgbnir, 
-                                   target_size=target_size, augment=False, nir_drop_prob=1.0 if test_on_rgb_only else nir_drop_prob)
-    test_ds = WeedyRiceRGBNIRDataset(data_root, split="test", use_rgbnir=use_rgbnir, 
-                                    target_size=target_size, augment=False, nir_drop_prob=1.0 if test_on_rgb_only else nir_drop_prob)
+    """
+    Create dataloaders for weedy rice segmentation.
+    
+    Args:
+        data_root: Root directory of dataset
+        batch_size: Batch size for training/validation
+        num_workers: Number of workers for data loading
+        use_rgbnir: If True, use 4-channel input (RGB + NIR/NDVI), else 3-channel RGB
+        use_ndvi: If True, compute NDVI from NIR and Red channels instead of using raw NIR
+        target_size: Target image size (height, width)
+        nir_drop_prob: Probability of zeroing out the 4th channel during training
+        test_on_rgb_only: If True, zero out 4th channel for validation and test sets
+    
+    Returns:
+        Tuple of (train_loader, val_loader, test_loader)
+    """
+    train_ds = WeedyRiceRGBNIRDataset(
+        data_root, split="train", use_rgbnir=use_rgbnir, use_ndvi=use_ndvi,
+        target_size=target_size, augment=True, nir_drop_prob=nir_drop_prob
+    )
+    val_ds = WeedyRiceRGBNIRDataset(
+        data_root, split="val", use_rgbnir=use_rgbnir, use_ndvi=use_ndvi,
+        target_size=target_size, augment=False, 
+        nir_drop_prob=1.0 if test_on_rgb_only else nir_drop_prob
+    )
+    test_ds = WeedyRiceRGBNIRDataset(
+        data_root, split="test", use_rgbnir=use_rgbnir, use_ndvi=use_ndvi,
+        target_size=target_size, augment=False, 
+        nir_drop_prob=1.0 if test_on_rgb_only else nir_drop_prob
+    )
     
     train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, 
                              num_workers=num_workers, pin_memory=True)

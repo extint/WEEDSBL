@@ -9,3 +9,4 @@ num_workers: 4
 ckpt_dir: ./checkpoints
 mixed_precision: false
 nir_dropout_prob: 0.1
+test_on_rgb_only: true

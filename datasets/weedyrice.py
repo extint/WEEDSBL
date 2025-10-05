@@ -276,7 +276,7 @@ class WeedyRiceRGBNIRDataset(Dataset):
         rgb = self._scale_uint(rgb)
         rgb = (rgb - self.rgb_mean) / self.rgb_std
         if self.use_rgbnir and nir is not None:
-            if self.nir_drop_prob > 0.0 and random.random() < self.nir_drop_prob:
+            if self.nir_drop_prob > 0.0 and random.random() <= self.nir_drop_prob:
                 nir = np.zeros_like(nir)
             else:
                 # Normalize NIR and stack
@@ -297,14 +297,15 @@ def create_weedy_rice_rgbnir_dataloaders(
     num_workers: int = 4,
     use_rgbnir: bool = True,  # True: RGB+NIR (4ch), False: RGB (3ch)
     target_size: Tuple[int, int] = (960, 1280),
-    nir_drop_prob: float = 0.0
+    nir_drop_prob: float = 0.0,
+    test_on_rgb_only: bool = False
 ) -> Tuple[DataLoader, DataLoader, DataLoader]:
     train_ds = WeedyRiceRGBNIRDataset(data_root, split="train", use_rgbnir=use_rgbnir, 
                                      target_size=target_size, augment=True, nir_drop_prob=nir_drop_prob)
     val_ds = WeedyRiceRGBNIRDataset(data_root, split="val", use_rgbnir=use_rgbnir, 
-                                   target_size=target_size, augment=False, nir_drop_prob=nir_drop_prob)
+                                   target_size=target_size, augment=False, nir_drop_prob=1.0 if test_on_rgb_only else nir_drop_prob)
     test_ds = WeedyRiceRGBNIRDataset(data_root, split="test", use_rgbnir=use_rgbnir, 
-                                    target_size=target_size, augment=False, nir_drop_prob=nir_drop_prob)
+                                    target_size=target_size, augment=False, nir_drop_prob=1.0 if test_on_rgb_only else nir_drop_prob)
     
     train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, 
                              num_workers=num_workers, pin_memory=True)

@@ -5,13 +5,13 @@ model:
   out_channels: 1
 
 inference:
-  data_root: /home/warrenjacinto/Projects/WEEDSBL/datasets/condensed_weed/
+  data_root: /home/vjti-comp/Downloads/A Dataset of Aligned RGB and Multispectral UAV Ima(1)/A Dataset of Aligned RGB and Multispectral UAV Ima/WeedyRice-RGBMS-DB
   use_random: True
-  rgb_image_path: /home/warrenjacinto/Projects/WEEDSBL/datasets/condensed_weed/RGB/DJI_DateTime_2024_06_02_13_43_0045_lat_10.3037478_lon_105.2619385_alt_19.960m.JPG
-  nir_image_path: /home/warrenjacinto/Projects/WEEDSBL/datasets/condensed_weed/Multispectral/DJI_DateTime_2024_06_02_13_43_0045_lat_10.3037478_lon_105.2619385_alt_19.960m_NIR.TIF
+  rgb_image_path: /home/vjti-comp/Downloads/CoFly-WeedDB/images/ID_00050_UAV_dji.phantom.4.pro.hawk.1_[Lat=39.54212050531792,Lon=22.644424707209755,Alt=4.900000095367432]_DATE_03_07_2019_14_38_58.png
+  nir_image_path: /home/vjti-comp/Downloads/CoFly-WeedDB/images/ID_00050_UAV_dji.phantom.4.pro.hawk.1_[Lat=39.54212050531792,Lon=22.644424707209755,Alt=4.900000095367432]_DATE_03_07_2019_14_38_58.png
   checkpoint_path: ./checkpoints/UNet_4ch_best.pth
   output_path: ./outputs/
-  ground_truth_path: /home/warrenjacinto/Projects/WEEDSBL/datasets/condensed_weed/Masks/DJI_DateTime_2024_06_02_13_43_0045_lat_10.3037478_lon_105.2619385_alt_19.960m.png
+  ground_truth_path: /home/vjti-comp/Downloads/CoFly-WeedDB/labels_1d/ID_00050_UAV_dji.phantom.4.pro.hawk.1_[Lat=39.54212050531792,Lon=22.644424707209755,Alt=4.900000095367432]_DATE_03_07_2019_14_38_58.png
   target_size: [960, 1280]
   threshold: 0.5
   device: cuda

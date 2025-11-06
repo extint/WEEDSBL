@@ -1,6 +1,7 @@
 import os
 import cv2
 from models.unet import UNet
+from models.dannet import DANNFromMANet
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
@@ -241,11 +242,17 @@ def main():
     config = load_config("infer_config.yaml")
     
     # Create model from config
-    model = UNet(
-        in_channels=config['model']['in_channels'],
-        base_ch=config['model']['base_channels'],
-        out_channels=config['model']['out_channels']
-    )
+    # model = UNet(
+    #     in_channels=config['model']['in_channels'],
+    #     base_ch=config['model']['base_channels'],
+    #     out_channels=config['model']['out_channels']
+    # )
+    model = DANNFromMANet(
+    in_channels=config['model']['in_channels'],
+    base_ch=config['model']['base_channels'],
+    out_channels=config['model']['out_channels'],
+    grl_lambda=0.0  # not used during inference
+    ).to(device)
     
     # Run inference
     device = config['inference'].get('device', 'cuda')

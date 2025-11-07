@@ -1,1 +1,3 @@
 weed
+*.pyc
+__pycache__/

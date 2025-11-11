@@ -1,6 +1,6 @@
 model:
-  type: UNet
-  in_channels: 4
+  type: LightMANNet
+  in_channels: 3
   base_channels: 4
   out_channels: 1
 
@@ -9,7 +9,7 @@ inference:
   use_random: True
   rgb_image_path: /home/vjti-comp/Downloads/CoFly-WeedDB/images/ID_00050_UAV_dji.phantom.4.pro.hawk.1_[Lat=39.54212050531792,Lon=22.644424707209755,Alt=4.900000095367432]_DATE_03_07_2019_14_38_58.png
   nir_image_path: /home/vjti-comp/Downloads/CoFly-WeedDB/images/ID_00050_UAV_dji.phantom.4.pro.hawk.1_[Lat=39.54212050531792,Lon=22.644424707209755,Alt=4.900000095367432]_DATE_03_07_2019_14_38_58.png
-  checkpoint_path: ./checkpoints/UNet_4ch_best.pth
+  checkpoint_path: ./checkpoints/LightMANet_3ch_best_rgbonly.pth
   output_path: ./outputs/
   ground_truth_path: /home/vjti-comp/Downloads/CoFly-WeedDB/labels_1d/ID_00050_UAV_dji.phantom.4.pro.hawk.1_[Lat=39.54212050531792,Lon=22.644424707209755,Alt=4.900000095367432]_DATE_03_07_2019_14_38_58.png
   target_size: [960, 1280]

@@ -125,7 +125,7 @@ def run_student_inference(
     axes[2].axis('off')
     
     plt.tight_layout()
-    plt.savefig("inference_visualization.png", dpi=150, bbox_inches='tight')
+    plt.savefig("inference_visualization1.png", dpi=150, bbox_inches='tight')
     print("Saved visualization to: inference_visualization.png")
     plt.show()
     
@@ -134,14 +134,14 @@ def run_student_inference(
 
 if __name__ == "__main__":
     # Configuration - UPDATE THESE PATHS
-    DATA_ROOT = "C:/Users/ACER/Downloads/condensed_dataset/condensed_dataset"  # Update this
+    DATA_ROOT = "/home/vjti-comp/Desktop/WeedyRice-RGBMS-DB"  # Update this
     CKPT_PATH = "./student_ckpts/student_rgb_only_best.pth"  # Path to your student checkpoint
     
     # Example image path from your dataset
     IMG_PATH = os.path.join(
         DATA_ROOT,
         "RGB",
-        "DJI_DateTime_2024_06_02_13_46_0101_lat_10.3048303_lon_105.2621055_alt_20.021m.JPG"
+        "DJI_DateTime_2024_06_02_13_42_0035_lat_10.3040603_lon_105.2619317_alt_20.018m.JPG"
     )
     
     # Model architecture - match what you used for training
@@ -161,7 +161,7 @@ if __name__ == "__main__":
         ckpt_path=CKPT_PATH,
         out_mask_path="./output_mask.png",
         out_overlay_path="./output_overlay.png",
-        device="cpu",  # Use "cpu" if no GPU available
+        device="cuda",  # Use "cpu" if no GPU available
         target_size=(960, 1280),
         model_arch=STUDENT_ARCH,
         in_channels=3

@@ -180,7 +180,7 @@ if __name__ == "__main__":
     parser.add_argument("--teacher_ckpt", required=True, help="Path to pretrained teacher (RGB+NIR) checkpoint")
     parser.add_argument("--data_root", required=True, help="Root of WeedyRice dataset (same layout as before)")
     parser.add_argument("--out_dir", default="./student_ckpts", help="Where to save student checkpoints")
-    parser.add_argument("--epochs", type=int, default=30)
+    parser.add_argument("--epochs", type=int, default=50)
     parser.add_argument("--batch_size", type=int, default=8)
     parser.add_argument("--lr", type=float, default=2e-4)
     parser.add_argument("--alpha", type=float, default=1.0, help="KD weight (teacher->student)")

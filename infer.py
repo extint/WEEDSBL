@@ -1,6 +1,7 @@
 import os
 import cv2
 from models.unet import UNet
+from models.dannet import DANNFromMANet
 from models.mannet import LightMANet
 import numpy as np
 import torch
@@ -243,13 +244,19 @@ def main():
     
     # Create model from config
     # model = UNet(
-    #     in_channels=config['model']['in_channels'],
-    #     base_ch=config['model']['base_channels'],
-    #     out_channels=config['model']['out_channels']
+        # in_channels=config['model']['in_channels'],
+        # base_ch=config['model']['base_channels'],
+        # out_channels=config['model']['out_channels']
     # )
-    
-    model = LightMANet(in_channels=config["model"]["in_channels"], num_classes=1, base_ch=config["model"]["base_channels"])
 
+    model = LightMANet(3, 1, 4)
+    # model = DANNFromMANet(
+    # in_channels=config['model']['in_channels'],
+    # base_ch=config['model']['base_channels'],
+    # out_channels=config['model']['out_channels'],
+    # grl_lambda=0.0  # not used during inference
+    # ).to(device)
+    
     # Run inference
     device = config['inference'].get('device', 'cuda')
     out_path = run_inference(model, config, device=device, nir_drop=config["inference"]["nir_drop"])

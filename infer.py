@@ -1,6 +1,7 @@
 import os
 import cv2
 from models.unet import UNet
+from models.mannet import LightMANet
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
@@ -241,15 +242,17 @@ def main():
     config = load_config("infer_config.yaml")
     
     # Create model from config
-    model = UNet(
-        in_channels=config['model']['in_channels'],
-        base_ch=config['model']['base_channels'],
-        out_channels=config['model']['out_channels']
-    )
+    # model = UNet(
+    #     in_channels=config['model']['in_channels'],
+    #     base_ch=config['model']['base_channels'],
+    #     out_channels=config['model']['out_channels']
+    # )
     
+    model = LightMANet(in_channels=config["model"]["in_channels"], num_classes=1, base_ch=config["model"]["base_channels"])
+
     # Run inference
     device = config['inference'].get('device', 'cuda')
-    out_path = run_inference(model, config, device=device, nir_drop=True)
+    out_path = run_inference(model, config, device=device, nir_drop=config["inference"]["nir_drop"])
     
     print("Inference complete!")
 

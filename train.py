@@ -5,6 +5,7 @@ import torch
 from torch import optim
 from datasets.weedyrice import create_weedy_rice_rgbnir_dataloaders
 from models.unet import UNet
+from models.mannet import LightMANet
 from models.losses import BCEDiceLoss
 import yaml
 import sys
@@ -79,7 +80,8 @@ def main():
         test_on_rgb_only=config["test_on_rgb_only"],
         use_ndvi=config["use_ndvi"]
     )
-    model = UNet(in_channels=config["in_channels"], base_ch=4, out_channels=1)
+    # model = UNet(in_channels=config["in_channels"], base_ch=4, out_channels=1)
+    model = LightMANet(in_channels=config["in_channels"], num_classes=1, base_ch=4)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)

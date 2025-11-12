@@ -1,5 +1,5 @@
 model:
-  type: UNet
+  type: LightMANNet
   in_channels: 4
   base_channels: 4
   out_channels: 1
@@ -9,10 +9,10 @@ inference:
   use_random: True
   rgb_image_path: /home/warrenjacinto/Projects/WEEDSBL/datasets/condensed_weed/RGB/DJI_DateTime_2024_06_02_13_43_0045_lat_10.3037478_lon_105.2619385_alt_19.960m.JPG
   nir_image_path: /home/warrenjacinto/Projects/WEEDSBL/datasets/condensed_weed/Multispectral/DJI_DateTime_2024_06_02_13_43_0045_lat_10.3037478_lon_105.2619385_alt_19.960m_NIR.TIF
-  checkpoint_path: ./checkpoints/UNet_4ch_best.pth
+  checkpoint_path: ./checkpoints/LightMANNet_4ch_best_basicrgb+nir.pth
   output_path: ./outputs/
   ground_truth_path: /home/warrenjacinto/Projects/WEEDSBL/datasets/condensed_weed/Masks/DJI_DateTime_2024_06_02_13_43_0045_lat_10.3037478_lon_105.2619385_alt_19.960m.png
   target_size: [960, 1280]
   threshold: 0.5
   device: cuda
-  nir_drop: True
+  nir_drop: False

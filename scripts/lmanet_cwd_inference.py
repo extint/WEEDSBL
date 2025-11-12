@@ -123,8 +123,8 @@ def inference_single_image(
     # Create legend
     legend_elements = [
         mpatches.Patch(color=np.array(COLOR_MAP[0])/255, label='Class 0 (Background)'),
-        mpatches.Patch(color=np.array(COLOR_MAP[1])/255, label='Class 1 (Weed)'),
-        mpatches.Patch(color=np.array(COLOR_MAP[2])/255, label='Class 2 (Crop)')
+        mpatches.Patch(color=np.array(COLOR_MAP[1])/255, label='Class 1 (Crop)'),
+        mpatches.Patch(color=np.array(COLOR_MAP[2])/255, label='Class 2 (Weed)')
     ]
     fig.legend(handles=legend_elements, loc='lower center', 
                bbox_to_anchor=(0.5, 0.98), ncol=3, fontsize=12)

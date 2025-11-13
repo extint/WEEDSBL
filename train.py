@@ -15,7 +15,7 @@ from datetime import datetime
 @torch.no_grad()
 def evaluate(model, loader, device):
     model.eval()
-    ious, f1s = [], []
+    ious, f1s, precs, recs = [], [], [], []
     for batch in loader:
         x = batch["images"].to(device)
         y = batch["labels"].to(device).long()          # (B,H,W), values {0,1}
@@ -35,9 +35,13 @@ def evaluate(model, loader, device):
         rec  = tp / (tp + fn + 1e-6)
         f1   = (2 * prec * rec / (prec + rec + 1e-6)).mean().item()
         f1s.append(f1)
+        precs.append(prec.mean().item())
+        recs.append(rec.mean().item())
 
     return {"mIoU": float(np.mean(ious) if ious else 0.0),
-            "F1":   float(np.mean(f1s) if f1s else 0.0)}
+            "F1":   float(np.mean(f1s) if f1s else 0.0),
+            "prec": float(np.mean(precs) if precs else 0.0),
+            "rec": float(np.mean(recs) if recs else 0.0)}
 
 def train_one_epoch(model, loader, optimizer, loss_fn, device, scaler=None) -> float:
     model.train()
@@ -96,12 +100,14 @@ def main():
     for epoch in range(1, config["epochs"] + 1):
         train_loss = train_one_epoch(model, train_loader, optimizer, loss_fn, device, scaler)
         metrics = evaluate(model, val_loader, device)
-        print(f"[Epoch {epoch:03d}] Loss: {train_loss:.4f} | Val mIoU: {metrics['mIoU']:.4f} | Val F1: {metrics['F1']:.4f}")
+        print(f"[Epoch {epoch:03d}] Loss: {train_loss:.4f} | Val mIoU: {metrics['mIoU']:.4f} | Val F1: {metrics['F1']:.4f} | Val Prec: {metrics['prec']:.4f} | Val Rec: {metrics['rec']:.4f}")
 
         # TensorBoard logging
         writer.add_scalar("Loss/train", train_loss, epoch)
         writer.add_scalar("mIoU/val", metrics["mIoU"], epoch)
         writer.add_scalar("F1/val", metrics["F1"], epoch)
+        writer.add_scalar("Precision/val", metrics["prec"], epoch)
+        writer.add_scalar("Recall/val", metrics["rec"], epoch)
 
         # Save best
         if metrics["mIoU"] >= best_miou:
@@ -111,6 +117,8 @@ def main():
                         "loss": train_loss,
                         "miou": best_miou,
                         "F1": metrics["F1"],
+                        "Recall": metrics["rec"],
+                        "Precision": metrics["prec"],
                         "train_config": config}, ckpt_path)
             print(f"Saved checkpoint: {ckpt_path}")
 
@@ -121,6 +129,8 @@ def main():
     # TensorBoard logging for test
     writer.add_scalar("mIoU/test", test_metrics["mIoU"])
     writer.add_scalar("F1/test", test_metrics["F1"])
+    writer.add_scalar("Precision/test", test_metrics["prec"])
+    writer.add_scalar("Recall/test", test_metrics["rec"])
     writer.close()
 
 if __name__ == "__main__":

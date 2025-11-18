@@ -74,7 +74,6 @@ class LightMANet(nn.Module):
     """Memory-efficient MANet for 4-channel RGB+NIR input"""
     def __init__(self, in_channels=4, num_classes=2, base_ch=16):  # Reduced base_ch
         super().__init__()
-        
         # Lightweight encoder
         self.conv1 = nn.Sequential(
             nn.Conv2d(in_channels, base_ch, 7, stride=2, padding=3, bias=False),
@@ -121,16 +120,30 @@ class LightMANet(nn.Module):
         return nn.Sequential(*layers)
     
     def forward(self, x):
-        # Encoder path - no skip connections to save memory
+        # Store input size for final resize
+        input_size = x.shape[-2:]  # (H, W)
+        
+        # Encoder path
         x = self.conv1(x)
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.layer3(x)
         x = self.layer4(x)
         
-        # Simple decoder
+        # Decoder
         x = self.decoder(x)
+        
+        # Final convolution
         logits = self.final(x)
+        
+        # *** FIX: Resize output to match input size exactly ***
+        logits = F.interpolate(
+            logits, 
+            size=input_size, 
+            mode='bilinear', 
+            align_corners=False
+        )
+        
         return logits
 
 # Usage in main:

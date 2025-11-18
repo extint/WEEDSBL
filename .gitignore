@@ -1,3 +1,9 @@
 weed
 *.pyc
 __pycache__/
+checkpoints
+experiments
+distill_experiments
+dropout_experiments
+scripts/__pycache__
+train

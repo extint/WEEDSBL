@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from tqdm import tqdm
 
-from MANNet import LightMANet
+from scripts.MANet import LightMANet
 from cwd_data_loader import get_val_transforms
 
 

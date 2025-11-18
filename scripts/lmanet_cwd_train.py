@@ -15,7 +15,7 @@ import numpy as np
 from tqdm import tqdm
 
 # Import custom modules
-from MANNet import LightMANet
+from scripts.MANet import LightMANet
 from cwd_data_loader import create_cwd_dataloaders
 
 

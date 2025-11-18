@@ -250,7 +250,7 @@ def run_inference(model, img_path, nir, ckpt_path, out_path, device="cuda"):
     print("Saved:", out_path)
     return out_path
 
-from MANNet import LightMANet
+from MANet import LightMANet
 
 import torchvision.models as models
 class MobileUNet4Ch(nn.Module):

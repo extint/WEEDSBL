@@ -4,19 +4,19 @@ import onnx
 from onnx import helper, numpy_helper
 import numpy as np
 
-from MANNet import LightMANet
+from MANet import LightMANet
 
-ckpt_path = "scripts/checkpoints/lmannet_4_ch_best.pth"
-onnx_path = "scripts/checkpoints/lmannet_4_ch_best.onnx"
+ckpt_path = "/home/vjti-comp/WEEDSBL/experiments/lightmanet_rgb_nir-False/checkpoints/best_model.pth"
+onnx_path = "scripts/checkpoints/test_lmannet_nir_false.onnx"
 device = "cuda"
 
 # Load model
-model = LightMANet(in_channels=4, num_classes=1, base_ch=32)
+model = LightMANet(in_channels=3, num_classes=1, base_ch=32)
 
 device_obj = torch.device(device if torch.cuda.is_available() else "cpu")
-state = torch.load(ckpt_path, map_location=device_obj)
+state = torch.load(ckpt_path, map_location=device_obj, weights_only=False)
 state_dict = state["model"] if isinstance(state, dict) and "model" in state else state
-model.load_state_dict(state_dict, strict=True)
+model.load_state_dict(state_dict["model_state_dict"], strict=True)
 
 # Wrap with sigmoid
 class ModelWithSigmoid(nn.Module):
@@ -32,7 +32,7 @@ class ModelWithSigmoid(nn.Module):
 wrapped_model = ModelWithSigmoid(model)
 wrapped_model.eval().to(device_obj)
 
-dummy = torch.randn(1, 4, 960, 1280, device=device_obj)
+dummy = torch.randn(1, 3, 960, 1280, device=device_obj)
 
 # Export
 print("Exporting to ONNX...")

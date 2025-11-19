@@ -4,6 +4,7 @@ import numpy as np
 import cv2
 import torch
 from torch.utils.data import Dataset, DataLoader
+from weedutils.augmentations import AgriculturalAugmentation
 
 
 def _read_split_list(splits_dir: str, split: str) -> Optional[List[str]]:
@@ -54,6 +55,17 @@ class WeedsGaloreRGBNIRDataset(Dataset):
         use_rgbnir: bool = True,
         augment: bool = False,
         nir_drop_prob: float = 0.0,
+        # Agricultural augmentation parameters
+        hue_shift: int = 15,
+        sat_shift: int = 30,
+        val_shift: int = 20,
+        brightness_limit: float = 0.2,
+        contrast_limit: float = 0.2,
+        noise_std: float = 0.05,
+        flip_prob: float = 0.5,
+        hsv_prob: float = 0.7,
+        brightness_prob: float = 0.5,
+        noise_prob: float = 0.3,
     ):
         """
         Args:
@@ -61,8 +73,18 @@ class WeedsGaloreRGBNIRDataset(Dataset):
             split: 'train' or 'val'
             target_size: (height, width) to resize images
             use_rgbnir: If True, load 4 channels (RGB+NIR), else 3 channels (RGB only)
-            augment: Apply simple augmentations (flip/rotate)
+            augment: Apply advanced agricultural augmentations
             nir_drop_prob: Probability of zeroing out NIR channel during training (0.0 to 1.0)
+            hue_shift: HSV hue shift range (±degrees)
+            sat_shift: HSV saturation shift range (±)
+            val_shift: HSV value shift range (±)
+            brightness_limit: Brightness adjustment limit (±)
+            contrast_limit: Contrast adjustment limit (±)
+            noise_std: Gaussian noise standard deviation
+            flip_prob: Probability of horizontal flip
+            hsv_prob: Probability of HSV jittering
+            brightness_prob: Probability of brightness/contrast adjustment
+            noise_prob: Probability of adding noise
         """
         self.root = root
         self.split = split
@@ -87,7 +109,24 @@ class WeedsGaloreRGBNIRDataset(Dataset):
         self.rgb_mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)
         self.rgb_std = np.array([0.229, 0.224, 0.225], dtype=np.float32)
 
-        print(f"Loaded {len(self.samples)} samples for {split} split")
+        # Initialize agricultural augmentation pipeline
+        if self.augment:
+            self.augmentor = AgriculturalAugmentation(
+                hue_shift=hue_shift,
+                sat_shift=sat_shift,
+                val_shift=val_shift,
+                brightness_limit=brightness_limit,
+                contrast_limit=contrast_limit,
+                noise_std=noise_std,
+                flip_prob=flip_prob,
+                hsv_prob=hsv_prob,
+                brightness_prob=brightness_prob,
+                noise_prob=noise_prob
+            )
+            print(f"[INFO] Loaded {len(self.samples)} samples for {split} split with ADVANCED augmentations")
+        else:
+            self.augmentor = None
+            print(f"[INFO] Loaded {len(self.samples)} samples for {split} split (no augmentation)")
 
     def _index_samples(self, split_list: List[str]) -> List[Dict]:
         """
@@ -185,26 +224,6 @@ class WeedsGaloreRGBNIRDataset(Dataset):
         mask_resized = cv2.resize(mask, (self.target_w, self.target_h), interpolation=cv2.INTER_NEAREST)
         return img_resized, mask_resized
 
-    def _augment(self, img: np.ndarray, mask: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-        """Simple augmentation: random flip and rotation"""
-        # Random horizontal flip
-        if np.random.rand() > 0.5:
-            img = np.fliplr(img)
-            mask = np.fliplr(mask)
-
-        # Random vertical flip
-        if np.random.rand() > 0.5:
-            img = np.flipud(img)
-            mask = np.flipud(mask)
-
-        # Random 90-degree rotation
-        k = np.random.randint(0, 4)  # 0, 1, 2, 3 (0°, 90°, 180°, 270°)
-        if k > 0:
-            img = np.rot90(img, k)
-            mask = np.rot90(mask, k)
-
-        return img, mask
-
     def _normalize(self, img: np.ndarray) -> np.ndarray:
         """
         Normalize image:
@@ -245,11 +264,12 @@ class WeedsGaloreRGBNIRDataset(Dataset):
         # Scale to [0, 1]
         img = img.astype(np.float32) / 255.0
 
-        # Augment (before normalization for consistency)
-        if self.augment:
-            img, mask = self._augment(img, mask)
+        # Apply ADVANCED agricultural augmentation
+        # (includes: flips, HSV jitter, brightness/contrast, noise)
+        if self.augment and self.augmentor is not None:
+            img, mask = self.augmentor(img, mask)
 
-        # NIR drop augmentation (applied BEFORE normalization, during training only)
+        # NIR drop augmentation (applied AFTER augmentation, BEFORE normalization)
         if self.use_rgbnir and self.nir_drop_prob > 0 and self.split == "train":
             if np.random.rand() < self.nir_drop_prob:
                 # Zero out the NIR channel (channel index 3)
@@ -264,7 +284,7 @@ class WeedsGaloreRGBNIRDataset(Dataset):
 
         # Mask: (H, W) with class indices
         y = torch.from_numpy(mask.astype(np.int64))
-        y[y > 1] = 2  # dumb fix used by og weedsgalore authors, because class ids are 0,1,2,...5, where >1 is weeds
+        y[y > 1] = 2  # Fix: class ids 0,1,2,...5 where >1 are weeds
 
         return {
             "images": x,
@@ -280,6 +300,18 @@ def create_weedsgalore_dataloaders(
     use_rgbnir: bool = True,
     target_size: Tuple[int, int] = (600, 600),
     nir_drop_prob: float = 0.0,
+    # Augmentation parameters
+    augment: bool = True,
+    hue_shift: int = 15,
+    sat_shift: int = 30,
+    val_shift: int = 20,
+    brightness_limit: float = 0.2,
+    contrast_limit: float = 0.2,
+    noise_std: float = 0.05,
+    flip_prob: float = 0.5,
+    hsv_prob: float = 0.7,
+    brightness_prob: float = 0.5,
+    noise_prob: float = 0.3,
 ) -> Tuple[DataLoader, DataLoader]:
     """
     Create train and validation dataloaders for WeedsGalore dataset.
@@ -291,6 +323,17 @@ def create_weedsgalore_dataloaders(
         use_rgbnir: If True, load 4 channels (RGB+NIR), else 3 channels (RGB only)
         target_size: (height, width) to resize images
         nir_drop_prob: Probability of zeroing out NIR channel during training (0.0 to 1.0)
+        augment: Enable advanced agricultural augmentations for training
+        hue_shift: HSV hue shift range (±degrees)
+        sat_shift: HSV saturation shift range (±)
+        val_shift: HSV value shift range (±)
+        brightness_limit: Brightness adjustment limit (±)
+        contrast_limit: Contrast adjustment limit (±)
+        noise_std: Gaussian noise standard deviation
+        flip_prob: Probability of horizontal flip
+        hsv_prob: Probability of HSV jittering
+        brightness_prob: Probability of brightness/contrast adjustment
+        noise_prob: Probability of adding noise
 
     Returns:
         (train_loader, val_loader)
@@ -300,8 +343,18 @@ def create_weedsgalore_dataloaders(
         split="train", 
         use_rgbnir=use_rgbnir,
         target_size=target_size, 
-        augment=True,
-        nir_drop_prob=nir_drop_prob
+        augment=augment,
+        nir_drop_prob=nir_drop_prob,
+        hue_shift=hue_shift,
+        sat_shift=sat_shift,
+        val_shift=val_shift,
+        brightness_limit=brightness_limit,
+        contrast_limit=contrast_limit,
+        noise_std=noise_std,
+        flip_prob=flip_prob,
+        hsv_prob=hsv_prob,
+        brightness_prob=brightness_prob,
+        noise_prob=noise_prob
     )
 
     val_ds = WeedsGaloreRGBNIRDataset(
@@ -309,8 +362,8 @@ def create_weedsgalore_dataloaders(
         split="val", 
         use_rgbnir=use_rgbnir,
         target_size=target_size, 
-        augment=False,
-        nir_drop_prob=1.0 if nir_drop_prob != 0.0 else 0.0
+        augment=False,  # No augmentation for validation
+        nir_drop_prob=0.0  # Never drop NIR during validation
     )
 
     train_loader = DataLoader(
@@ -337,18 +390,30 @@ if __name__ == "__main__":
     # Set your dataset root path
     dataset_root = "/home/vjti-comp/Downloads/weedsgalore-dataset"
 
-    # Create dataloaders with RGB+NIR (4 channels) and NIR drop augmentation
+    # Create dataloaders with RGB+NIR (4 channels), NIR drop, and ADVANCED augmentation
     train_loader, val_loader = create_weedsgalore_dataloaders(
         data_root=dataset_root,
         batch_size=8,
         num_workers=4,
         use_rgbnir=True,
         target_size=(600, 600),
-        nir_drop_prob=0.3  # 30% chance to drop NIR during training
+        nir_drop_prob=0.3,  # 30% chance to drop NIR during training
+        augment=True,  # Enable advanced augmentation
+        # Augmentation parameters (defaults shown, can be customized)
+        hue_shift=15,
+        sat_shift=30,
+        val_shift=20,
+        brightness_limit=0.2,
+        contrast_limit=0.2,
+        noise_std=0.05,
+        flip_prob=0.5,
+        hsv_prob=0.7,
+        brightness_prob=0.5,
+        noise_prob=0.3
     )
 
     # Test loading a batch
-    print("\nTesting data loading...")
+    print("\nTesting data loading with augmentation...")
     for batch in train_loader:
         images = batch["images"]  # Shape: (B, 4, 600, 600) for RGB+NIR
         labels = batch["labels"]  # Shape: (B, 600, 600)
@@ -358,4 +423,5 @@ if __name__ == "__main__":
         print(f"Labels shape: {labels.shape}")
         print(f"Unique classes in batch: {torch.unique(labels)}")
         print(f"Sample IDs: {paths[:3]}")
+        print(f"Image value range: [{images.min():.3f}, {images.max():.3f}]")
         break

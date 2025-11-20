@@ -677,18 +677,18 @@ def get_model_info(model: nn.Module):
         "total_parameters_million": total_params / 1_000_000.0
     }
 
-model_list = ["unet3+"]
+# model_list = ["unet3+"]
 
-for model in model_list:
-    model_entity = create_model(
-        architecture=model,
-        in_channels=4,
-        num_classes=1,
-        base_ch = 16,
-    )
-    info = get_model_info(model_entity)
-    print(f"[INFO] Model: {info["architecture"]}")
-    print(f"[INFO] Parameters: {info["total_parameters"]:,} "
-        f"({info['total_parameters_million']:.2f}M)")
+# for model in model_list:
+#     model_entity = create_model(
+#         architecture=model,
+#         in_channels=4,
+#         num_classes=1,
+#         base_ch = 16,
+#     )
+#     info = get_model_info(model_entity)
+#     print(f"[INFO] Model: {info["architecture"]}")
+#     print(f"[INFO] Parameters: {info["total_parameters"]:,} "
+#         f"({info['total_parameters_million']:.2f}M)")
 
 

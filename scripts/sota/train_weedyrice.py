@@ -45,7 +45,6 @@ class IoULossMetric(nn.Module):
         iou = (inter + self.eps) / (union + self.eps)
         return 1 - iou.mean()
 
-
 # ============================================================
 # Loss: BCE + Dice
 # ============================================================

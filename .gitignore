@@ -3,6 +3,7 @@ weed
 __pycache__/
 checkpoints
 experiments
+experiments_weedsgalore
 distill_experiments
 dropout_experiments
 scripts/__pycache__

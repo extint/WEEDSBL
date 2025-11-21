@@ -1,0 +1,58 @@
+{
+  "best_val_miou": 0.6904087464014689,
+  "final_val_metrics": {
+    "pixel_accuracy": 0.9609178418803419,
+    "iou_Background": 0.9649405479431152,
+    "precision_Background": 0.9855173826217651,
+    "recall_Background": 0.9788205027580261,
+    "f1_Background": 0.9821570270937267,
+    "iou_Crop": 0.5112562775611877,
+    "precision_Crop": 0.6904860138893127,
+    "recall_Crop": 0.6632570624351501,
+    "f1_Crop": 0.6765971991814154,
+    "iou_Weed": 0.5772872567176819,
+    "precision_Weed": 0.6822457909584045,
+    "recall_Weed": 0.7895822525024414,
+    "f1_Weed": 0.7319996446307078,
+    "miou": 0.684494694073995,
+    "mean_precision": 0.7860830624898275,
+    "mean_recall": 0.8105532725652059,
+    "mean_f1": 0.7969179569686166,
+    "loss": 0.18463253123419626
+  },
+  "model_info": {
+    "total_parameters": 1119843,
+    "total_parameters_million": 1.119843,
+    "architecture": "LightMANet",
+    "total_non_trainable_parameters": 0,
+    "total_non_trainable_parameters_million": 0.0,
+    "flops": null,
+    "flops_gflops": null
+  },
+  "config": {
+    "model": "lightmanet",
+    "base_ch": 32,
+    "data_root": "/home/vjti/Downloads/weedsgalore-dataset",
+    "use_rgbnir": true,
+    "height": 600,
+    "width": 600,
+    "augment": true,
+    "nir_drop_prob": 0.2,
+    "batch_size": 4,
+    "epochs": 100,
+    "lr": 0.001,
+    "num_workers": 4,
+    "mixed_precision": false,
+    "dice_weight": 0.5,
+    "exp_name": "weedsgalore_lightmanet_4ch_RGBNIR_aug_20251120_023207",
+    "output_dir": "./experiments_weedsgalore",
+    "resume": null,
+    "num_classes": 3,
+    "class_names": [
+      "Background",
+      "Crop",
+      "Weed"
+    ],
+    "dataset": "weedsgalore"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "model": "lightmanet",
+  "base_ch": 32,
+  "data_root": "/home/vjti/Downloads/weedsgalore-dataset",
+  "use_rgbnir": true,
+  "height": 600,
+  "width": 600,
+  "augment": true,
+  "nir_drop_prob": 0.2,
+  "batch_size": 4,
+  "epochs": 100,
+  "lr": 0.001,
+  "num_workers": 4,
+  "mixed_precision": false,
+  "dice_weight": 0.5,
+  "exp_name": "weedsgalore_lightmanet_4ch_RGBNIR_aug_20251120_023207",
+  "output_dir": "./experiments_weedsgalore",
+  "resume": null,
+  "num_classes": 3,
+  "class_names": [
+    "Background",
+    "Crop",
+    "Weed"
+  ],
+  "dataset": "weedsgalore"
+}

@@ -387,8 +387,8 @@ def create_weedsgalore_dataloaders(
 
 # Example usage:
 if __name__ == "__main__":
-    # Set your dataset root path
-    dataset_root = "/home/vjti-comp/Downloads/weedsgalore-dataset"
+    # Set your dataset root path //vjti-comp
+    dataset_root = "/home/vedantmehra/Downloads/weedsgalore-dataset"
 
     # Create dataloaders with RGB+NIR (4 channels), NIR drop, and ADVANCED augmentation
     train_loader, val_loader = create_weedsgalore_dataloaders(

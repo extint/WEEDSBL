@@ -1,0 +1,31 @@
+{
+  "teacher_checkpoint": "./experiments_weedsgalore/weedsgalore_lightmanet_4ch_RGBNIR_aug_20251120_143020/checkpoints/best_model.pth",
+  "student_model": "unet",
+  "student_base_ch": 32,
+  "data_root": "/home/vedantmehra/Downloads/weedsgalore-dataset",
+  "height": 600,
+  "width": 600,
+  "augment": true,
+  "nir_drop_prob": 0.0,
+  "temperature": 4.0,
+  "alpha": 0.7,
+  "dice_weight": 0.5,
+  "batch_size": 4,
+  "epochs": 100,
+  "lr": 0.001,
+  "num_workers": 0,
+  "mixed_precision": false,
+  "exp_name": "distill_weedsgalore_unet_RGB_aug_20251120_173428",
+  "output_dir": "./distill_experiments_weedsgalore",
+  "resume": "./distill_experiments_weedsgalore/distill_weedsgalore_unet_RGB_aug_20251120_144436/checkpoints/latest_student.pth",
+  "num_classes": 3,
+  "class_names": [
+    "Background",
+    "Crop",
+    "Weed"
+  ],
+  "dataset": "weedsgalore",
+  "mode": "knowledge_distillation",
+  "student_input": "RGB (3 channels)",
+  "teacher_input": "RGB+NIR (4 channels)"
+}

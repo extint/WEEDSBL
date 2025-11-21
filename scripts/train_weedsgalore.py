@@ -250,8 +250,8 @@ def main():
     parser.add_argument("--base_ch", type=int, default=32,
                         help="Base number of channels for the model")
 
-    # Data
-    parser.add_argument("--data_root", type=str, default="/home/vjti-comp/Downloads/weedsgalore-dataset",
+    # Data /home/vjti-comp/Downloads/weedsgalore-dataset
+    parser.add_argument("--data_root", type=str, default="/home/vedantmehra/Downloads/weedsgalore-dataset",
                         help="Path to weedsgalore-dataset folder")
     parser.add_argument("--use_rgbnir", action="store_true",
                         help="Use RGB+NIR (4 channels), otherwise RGB only (3 channels)")

@@ -207,7 +207,16 @@ def load_teacher_model(checkpoint_path: str, device) -> nn.Module:
         base_ch=teacher_base_ch
     )
     
-    teacher.load_state_dict(checkpoint, strict=False)
+    # teacher.load_state_dict(checkpoint, strict=False)
+    # teacher.load_state_dict(checkpoint['model_state_dict'])
+    state_dict = checkpoint['model_state_dict']
+    filtered_state_dict = {
+        k: v for k, v in state_dict.items() 
+        if not ('total_ops' in k or 'total_params' in k)
+    }
+
+    teacher.load_state_dict(filtered_state_dict)
+
     teacher = teacher.to(device)
     teacher.eval()  # Teacher is always in eval mode
 
@@ -349,8 +358,8 @@ def main():
     parser.add_argument("--student_base_ch", type=int, default=32,
                        help="Base channels for student model")
 
-    # Data
-    parser.add_argument("--data_root", type=str, default="/home/vjti-comp/Downloads/weedsgalore-dataset",
+    # Data //                                                   vjti-comp
+    parser.add_argument("--data_root", type=str, default="/home/vedantmehra/Downloads/weedsgalore-dataset",
                        help="Path to weedsgalore-dataset folder")
     parser.add_argument("--height", type=int, default=600)
     parser.add_argument("--width", type=int, default=600)

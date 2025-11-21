@@ -1,0 +1,9 @@
+{
+  "total_parameters": 7763107,
+  "total_parameters_million": 7.763107,
+  "architecture": "UNet",
+  "total_non_trainable_parameters": 0,
+  "total_non_trainable_parameters_million": 0.0,
+  "flops": 75320782848.0,
+  "flops_gflops": 75.320782848
+}

@@ -1,0 +1,63 @@
+{
+  "best_student_miou": 0.7416368921597799,
+  "teacher_val_miou": 0.6920271714528402,
+  "final_val_metrics": {
+    "pixel_accuracy": 0.9694532051282051,
+    "iou_Background": 0.9723694324493408,
+    "precision_Background": 0.983099102973938,
+    "recall_Background": 0.988900363445282,
+    "f1_Background": 0.9859907000924456,
+    "iou_Crop": 0.5835636854171753,
+    "precision_Crop": 0.7982194423675537,
+    "recall_Crop": 0.6845466494560242,
+    "f1_Crop": 0.7370253195076691,
+    "iou_Weed": 0.6280040144920349,
+    "precision_Weed": 0.7832900881767273,
+    "recall_Weed": 0.760063111782074,
+    "f1_Weed": 0.7715013207772408,
+    "miou": 0.727979044119517,
+    "mean_precision": 0.854869544506073,
+    "mean_recall": 0.8111700415611267,
+    "mean_f1": 0.8315057801257852
+  },
+  "student_info": {
+    "total_parameters": 7763107,
+    "total_parameters_million": 7.763107,
+    "architecture": "UNet",
+    "total_non_trainable_parameters": 0,
+    "total_non_trainable_parameters_million": 0.0,
+    "flops": 75320782848.0,
+    "flops_gflops": 75.320782848
+  },
+  "config": {
+    "teacher_checkpoint": "./experiments_weedsgalore/weedsgalore_lightmanet_4ch_RGBNIR_aug_20251120_143020/checkpoints/best_model.pth",
+    "student_model": "unet",
+    "student_base_ch": 32,
+    "data_root": "/home/vedantmehra/Downloads/weedsgalore-dataset",
+    "height": 600,
+    "width": 600,
+    "augment": true,
+    "nir_drop_prob": 0.0,
+    "temperature": 4.0,
+    "alpha": 0.7,
+    "dice_weight": 0.5,
+    "batch_size": 4,
+    "epochs": 100,
+    "lr": 0.001,
+    "num_workers": 0,
+    "mixed_precision": false,
+    "exp_name": "distill_weedsgalore_unet_RGB_aug_20251120_173428",
+    "output_dir": "./distill_experiments_weedsgalore",
+    "resume": "./distill_experiments_weedsgalore/distill_weedsgalore_unet_RGB_aug_20251120_144436/checkpoints/latest_student.pth",
+    "num_classes": 3,
+    "class_names": [
+      "Background",
+      "Crop",
+      "Weed"
+    ],
+    "dataset": "weedsgalore",
+    "mode": "knowledge_distillation",
+    "student_input": "RGB (3 channels)",
+    "teacher_input": "RGB+NIR (4 channels)"
+  }
+}

@@ -6,5 +6,8 @@ experiments
 experiments_weedsgalore
 distill_experiments
 dropout_experiments
+experiments_weedsgalore
+distill_experiments_weedsgalore
+distill1_experiments
 scripts/__pycache__
 train

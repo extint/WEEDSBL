@@ -1,39 +1,33 @@
-# Crop Weed Detection
-## File Structure ##
-```
-├─ checkpoints/
-│  └─ unet4channel/                # Trained UNet checkpoints (RGB + NIR)
-│
-├─ datasets/
-│  └─ __pycache__/                  # Auto-generated Python cache (ignore)
-│
-├─ misc/
-│  ├─ inference/                    # ONNX runtime helpers for Jetson Nano
-│  │  ├─ CPU Runtime Provider       # Inference scripts for CPU execution
-│  │  └─ TensorRT Runtime Provider  # Inference scripts for TensorRT execution
-│  ├─ nano_inf/                     # Jetson Nano: image preprocessing utilities
-│  └─ nano_min/                     # Jetson Nano: (Used currently) main inference module (.npy Input Output format)
-│
-├─ models/                          # Model architecture definitions (unused currently)
-│
-├─ scripts/
-│  ├─ bench_outputs/                # Benchmark results on HSL dataset (.pth / .onnx)
-│  ├─ checkpoints/                  # Model checkpoints (LightMANet, UNet)
-│  ├─ inference_results/            # Generated inference results (can ignore)
-│  ├─ student_ckpts/                # Checkpoints from student model training
-│  │
-│  ├─ MANNET.py                     # MANNet architecture definition
-│  ├─ distill_train.py              # Knowledge distillation training (teacher → student)
-│  ├─ infer_student.py              # Inference for distilled student model
-│  ├─ inference_visualization.png   # Example output visualization
-│  ├─ lman_pthtoonnx.py             # Convert LightMANet (.pth) → (.onnx)
-│  ├─ main.py                       # Deprecated; to ignore
-│  ├─ new_main.py                   # Primary LightMANet training script
-│  ├─ onnxinf.py                    # ONNX inference (CPU / TensorRT)
-│  ├─ pthonnxcomparison.py          # Compare runtime: PyTorch vs ONNX
-│  ├─ pthtoonnx.py                  # Generic .pth → .onnx converter
-│  ├─ rice_weed_data_loader.py      # Data loader for RGB + NIR Rice–Weed dataset
-│  └─ (other deprecated scripts)    # Legacy; safe to ignore
-│
-└─ (other root files)               # Miscellaneous or non-essential files
-```
+# Crop-Weed Detection
+
+## Overview
+This repository focuses on **Crop-Weed Detection (CWD)** using deep learning models capable of handling both **RGB** and **RGB+NIR** image data.  
+It includes implementations of UNet-based architectures, advanced segmentation networks (DeepLabV3, PSPNet), and robustness mechanisms such as **NIR Dropping** and **Student-Teacher Learning**.
+
+---
+
+## Model Approaches
+
+### **1. Base Models**
+- **UNet** – Standard encoder-decoder for semantic segmentation.  
+- **MANNET** – Modified attention-based network designed for multispectral data.  
+Both models incorporate **NIR Dropping** for robustness against missing NIR channels.
+
+---
+
+### **2. NIR Dropping**
+To ensure the model performs consistently on datasets with or without NIR input, a probabilistic **NIR Drop Mechanism** replaces the NIR channel with zeros during training.  
+This enhances generalization to both RGB and RGB+NIR datasets.
+
+---
+
+### **3. Student-Teacher Learning**
+A **teacher model** (UNet/MANNET) is used to predict the **NIR channel** from RGB images.  
+The **student model** is then trained on RGB + generated NIR inputs, maintaining high performance even when NIR data is unavailable.
+
+---
+
+Dependencies are listed in:
+- `weed_requirements.txt`
+
+--- 

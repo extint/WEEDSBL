@@ -12,3 +12,4 @@ distill1_experiments
 scripts
 train
 sota/train_ddp.py
+inference_trash

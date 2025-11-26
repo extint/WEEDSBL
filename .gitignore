@@ -9,6 +9,6 @@ dropout_experiments
 experiments_weedsgalore
 distill_experiments_weedsgalore
 distill1_experiments
-scripts/__pycache__
+scripts
 train
 sota/train_ddp.py

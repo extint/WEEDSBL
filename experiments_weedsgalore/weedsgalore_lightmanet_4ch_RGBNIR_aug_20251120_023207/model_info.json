@@ -1,9 +1,0 @@
-{
-  "total_parameters": 1119843,
-  "total_parameters_million": 1.119843,
-  "architecture": "LightMANet",
-  "total_non_trainable_parameters": 0,
-  "total_non_trainable_parameters_million": 0.0,
-  "flops": null,
-  "flops_gflops": null
-}

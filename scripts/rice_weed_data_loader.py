@@ -9,7 +9,7 @@ from weedutils.augmentations import AgriculturalAugmentation
 
 
 def _read_split_list(meta_dir: str, split: str) -> Optional[List[str]]:
-    split_file = os.path.join(meta_dir, f"{split}.txt")
+    split_file = os.path.join(meta_dir, f"{split}_list.txt")
     if os.path.exists(split_file):
         with open(split_file, "r") as f:
             items = [ln.strip() for ln in f if ln.strip()]

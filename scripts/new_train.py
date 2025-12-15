@@ -362,7 +362,7 @@ def main():
 
     # Data
     parser.add_argument("--data_root", type=str,
-                        help="Dataset root directory", default="/home/vjti-comp/Downloads/A Dataset of Aligned RGB and Multispectral UAV Ima(1)/A Dataset of Aligned RGB and Multispectral UAV Ima/WeedyRice-RGBMS-DB")
+                        help="Dataset root directory", default="/home/vjtiadmin/Desktop/BTechGroup/A Dataset of Aligned RGB and Multispectral UAV Ima/WeedyRice-RGBMS-DB")
     parser.add_argument("--use_rgbnir", action="store_true",
                         help="Use RGB+NIR (4 channels), otherwise RGB only (3 channels)")
     parser.add_argument("--height", type=int, default=600)

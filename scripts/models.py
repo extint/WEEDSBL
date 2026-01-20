@@ -546,3 +546,40 @@ def get_model_info(model: nn.Module) -> dict:
         "total_non_trainable_parameters": total_params_non_trainable,
         "total_non_trainable_parameters_million": total_params_non_trainable / 1e6
     }
+
+# Below is for sanity check of number of parameters without running train script. 
+
+# def main():
+#     # Model configuration
+#     architecture = "lightmanet"
+#     in_channels = 4       # change to 4 if RGB+NIR
+#     num_classes = 1
+#     base_ch = 32
+
+#     # Create model
+#     model = create_model(
+#         architecture=architecture,
+#         in_channels=in_channels,
+#         num_classes=num_classes,
+#         base_ch=base_ch
+#     )
+
+#     # Get model info
+#     info = get_model_info(model)
+
+#     # Print results
+#     print("\n================ Model Summary ================")
+#     print(f"Architecture: {info['architecture']}")
+#     print(f"Input Channels: {in_channels}")
+#     print(f"Output Classes: {num_classes}")
+#     print(f"Base Channels: {base_ch}")
+#     print("----------------------------------------------")
+#     print(f"Total Parameters: {info['total_parameters']:,}")
+#     print(f"Total Parameters (M): {info['total_parameters_million']:.3f} M")
+#     print(f"Non-Trainable Parameters: {info['total_non_trainable_parameters']:,}")
+#     print(f"Non-Trainable Parameters (M): {info['total_non_trainable_parameters_million']:.3f} M")
+#     print("==============================================\n")
+
+
+# if __name__ == "__main__":
+#     main()

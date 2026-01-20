@@ -394,8 +394,8 @@ def main():
     )
 
     # Model architecture
-    parser.add_argument("--model", type=str, default="deeplabsv3+",
-                        choices=["deeplabsv3+"],
+    parser.add_argument("--model", type=str, default="lightmanet",
+                        choices=["unet", "unet_sa", "lightmanet"],
                         help="Model architecture to use")
     parser.add_argument("--base_ch", type=int, default=32,
                         help="Base number of channels for the model")

@@ -647,15 +647,15 @@ def train_worker(rank, world_size, gpu_ids, args):
 def main():
     parser = argparse.ArgumentParser()
     
-    parser.add_argument("--model", type=str, default="lightmanet",
-                        choices=["unet", "unet_sa", "lightmanet"])
-    parser.add_argument("--base_ch", type=int, default=16)
+    parser.add_argument("--model", type=str, default="deeplabsv3+",
+                        choices=["deeplabsv3+"])
+    parser.add_argument("--base_ch", type=int, default=32)
     parser.add_argument("--data_root", type=str,
                         default="/home/vjtiadmin/Desktop/BTechGroup/FINAL_SUGARBEETS_DATASET")
     parser.add_argument("--use_rgbnir", action="store_true")
     parser.add_argument("--height", type=int, default=966)
     parser.add_argument("--width", type=int, default=1296)
-    parser.add_argument("--batch_size", type=int, default=16,
+    parser.add_argument("--batch_size", type=int, default=4,
                         help="Batch size per GPU")
     parser.add_argument("--epochs", type=int, default=100)
     parser.add_argument("--lr", type=float, default=1e-3)
@@ -664,7 +664,7 @@ def main():
     parser.add_argument("--nir_drop", type=float, default=0.0)
     parser.add_argument("--exp_name", type=str, default=None)
     parser.add_argument("--output_dir", type=str, default="./experiments")
-    parser.add_argument("--gpu_ids", type=str, default="0,1,2",
+    parser.add_argument("--gpu_ids", type=str, default="1,2",
                         help="Comma-separated list of GPU IDs to use (e.g., '0,1,2')")
     
     args = parser.parse_args()

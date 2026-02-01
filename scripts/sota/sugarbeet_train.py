@@ -394,15 +394,15 @@ def main():
     )
 
     # Model architecture
-    parser.add_argument("--model", type=str, default="lightmanet",
-                        choices=["unet", "unet_sa", "lightmanet"],
+    parser.add_argument("--model", type=str, default="deeplabsv3+",
+                        choices=["deeplabsv3+"],
                         help="Model architecture to use")
-    parser.add_argument("--base_ch", type=int, default=32,
+    parser.add_argument("--base_ch", type=int, default=16,
                         help="Base number of channels for the model")
 
     # Data
     parser.add_argument("--data_root", type=str,
-                        default="/home/vjtiadmin/Desktop/BTechGroup/FINAL_SUGARBEETS_DATASET",
+                        default="/home/vjti-comp/Downloads/SUGARBEETS_MIXED_DATASET/",
                         help="Dataset root directory")
     parser.add_argument("--use_rgbnir", action="store_true",
                         help="Use RGB+NIR (4 channels), otherwise RGB only (3 channels)")
@@ -417,7 +417,7 @@ def main():
     parser.add_argument("--mixed_precision", action="store_true")
     parser.add_argument("--nir_drop", type=float, default=0.0,
                         help="Probability of dropping NIR channel during training")
-
+    
     # Checkpointing
     parser.add_argument("--exp_name", type=str, default=None,
                         help="Experiment name (auto-generated if not provided)")
@@ -425,6 +425,18 @@ def main():
                         help="Root directory for all experiments")
     parser.add_argument("--resume", type=str, default=None,
                         help="Path to checkpoint to resume training from")
+# Add these arguments to your parser
+    parser.add_argument("--stratified", action="store_true", 
+                    help="Use pre-computed stratified splits")
+    parser.add_argument("--stratified-dir", type=str, default="/home/vjti-comp/Downloads/SUGARBEETS_MIXED_DATASET/splits/",
+                    help="Directory containing train.txt, val.txt, test.txt")
+    parser.add_argument("--train-split", type=float, default=0.8,
+                    help="Train split ratio (if not using stratified)")
+    parser.add_argument("--val-split", type=float, default=0.1,
+                    help="Validation split ratio (if not using stratified)")
+
+# In main(), update dataloader creation:
+
 
     args = parser.parse_args()
 
@@ -467,14 +479,27 @@ def main():
 
     # Dataloaders
     print("[INFO] Creating dataloaders...")
+    # train_loader, val_loader, test_loader = create_sugarbeets_dataloaders(
+    #     data_root=args.data_root,
+    #     use_rgbnir=args.use_rgbnir,
+    #     batch_size=args.batch_size,
+    #     num_workers=args.num_workers,
+    #     target_size=(args.height, args.width),
+    #     nir_drop_prob=args.nir_drop
+    # )
     train_loader, val_loader, test_loader = create_sugarbeets_dataloaders(
-        data_root=args.data_root,
-        use_rgbnir=args.use_rgbnir,
-        batch_size=args.batch_size,
-        num_workers=args.num_workers,
-        target_size=(args.height, args.width),
-        nir_drop_prob=args.nir_drop
-    )
+    data_root=args.data_root,
+    use_rgbnir=args.use_rgbnir,
+    batch_size=args.batch_size,
+    num_workers=args.num_workers,
+    target_size=(args.height, args.width),
+    nir_drop_prob=args.nir_drop,
+    stratified=args.stratified,
+    stratified_dir=args.stratified_dir,
+    train_split=args.train_split,
+    val_split=args.val_split,
+    test_split=1.0 - args.train_split - args.val_split
+)
 
     print(f"[INFO] Train samples: {len(train_loader.dataset)}, "
           f"Val: {len(val_loader.dataset)}, "

@@ -293,7 +293,6 @@ class SugarBeetDataset(Dataset):
             "img_id": item["img_id"]
         }
 
-
 def create_sugarbeets_dataloaders(
     data_root: str,
     batch_size: int = 8,
@@ -301,96 +300,213 @@ def create_sugarbeets_dataloaders(
     use_rgbnir: bool = True,
     target_size: Tuple[int, int] = (966, 1296),
     nir_drop_prob: float = 0.0,
-    seed: int = 42
+    seed: int = 42,
+    stratified: bool = False,
+    stratified_dir: str = None,
+    train_split: float = 0.8,
+    val_split: float = 0.1,
+    test_split: float = 0.1
 ) -> Tuple[DataLoader, DataLoader, DataLoader]:
-
-    # ---------------------------
-    # Create FULL dataset (no split here)
-    # ---------------------------
-    full_ds = SugarBeetDataset(
+    
+    # Create ONE base dataset for ALL splits
+    base_ds = SugarBeetDataset(
         root=data_root,
-        split="train",          # only controls augmentation
+        split="train",  # only controls augmentation
+        use_rgbnir=use_rgbnir,
+        target_size=target_size,
+        augment=False   # No augmentation for consistent indexing
+    )
+    
+    n = len(base_ds)
+    # print(n)
+    print(f"Full dataset: {n} samples")
+    
+    if stratified and stratified_dir:
+        print(f"[INFO] Using pre-computed stratified splits from {stratified_dir}")
+        
+        # Read split files
+        train_file = os.path.join(stratified_dir, "train.txt")
+        val_file = os.path.join(stratified_dir, "val.txt")
+        test_file = os.path.join(stratified_dir, "test.txt")
+        
+        train_ids = set(read_txt_file(train_file))
+        val_ids = set(read_txt_file(val_file))
+        test_ids = set(read_txt_file(test_file))
+        
+        print(f"Loaded splits: train={len(train_ids)}, val={len(val_ids)}, test={len(test_ids)}")
+        
+        # FIXED: Match img_id from dataset.samples, not CSV filenames
+        train_idx = []
+        val_idx = []
+        test_idx = []
+        
+        # print(train_ids)
+        for i, sample in enumerate(base_ds.samples):
+            img_id = sample['img_id']  # This is '146_1021' format
+            # print(img_id)
+            if img_id in train_ids:
+                train_idx.append(i)
+                # print(train_idx)
+            elif img_id in val_ids:
+                val_idx.append(i)
+            elif img_id in test_ids:
+                test_idx.append(i)
+        
+        print(f"Matched indices: train={len(train_idx)}, val={len(val_idx)}, test={len(test_idx)}")
+        
+        if len(train_idx) == 0:
+            raise ValueError("No training samples found! Check filename matching.")
+    
+    else:
+        # Random split (unchanged)
+        indices = np.arange(n)
+        rng = np.random.default_rng(seed)
+        rng.shuffle(indices)
+        
+        n_train = int(train_split * n)
+        n_val = int(val_split * n)
+        n_test = n - n_train - n_val
+        
+        train_idx = indices[:n_train]
+        val_idx = indices[n_train:n_train + n_val]
+        test_idx = indices[n_train + n_val:]
+    
+    # Create subsets from SAME base dataset
+    train_ds = Subset(base_ds, train_idx)
+    
+    # Create train-specific dataset with augmentation
+    train_aug_ds = SugarBeetDataset(
+        root=data_root,
+        split="train",
         use_rgbnir=use_rgbnir,
         target_size=target_size,
         augment=True,
         nir_drop_prob=nir_drop_prob
     )
-
-    n = len(full_ds)
-    indices = np.arange(n)
-
-    # Reproducible shuffle
-    rng = np.random.default_rng(seed)
-    rng.shuffle(indices)
-
-    # ---------------------------
-    # Split sizes
-    # ---------------------------
-    n_train = int(0.9 * n)
-    n_val   = int(0.05 * n)
-    n_test  = n - n_train - n_val
-
-    train_idx = indices[:n_train]
-    val_idx   = indices[n_train:n_train + n_val]
-    test_idx  = indices[n_train + n_val:]
-
-    # ---------------------------
-    # Create subsets
-    # ---------------------------
-    train_ds = Subset(full_ds, train_idx)
-
-    # Validation & test must NOT augment
-    val_base = SugarBeetDataset(
-        root=data_root,
-        split="val",
-        use_rgbnir=use_rgbnir,
-        target_size=target_size,
-        augment=False
-    )
-    test_base = SugarBeetDataset(
-        root=data_root,
-        split="test",
-        use_rgbnir=use_rgbnir,
-        target_size=target_size,
-        augment=False
-    )
-
-    val_ds  = Subset(val_base, val_idx)
-    test_ds = Subset(test_base, test_idx)
-
-    # ---------------------------
+    train_ds = Subset(train_aug_ds, train_idx)
+    
+    val_ds = Subset(base_ds, val_idx)
+    test_ds = Subset(base_ds, test_idx)
+    
     # DataLoaders
-    # ---------------------------
-    train_loader = DataLoader(
-        train_ds,
-        batch_size=batch_size,
-        shuffle=True,
-        num_workers=num_workers,
-        pin_memory=True,
-        drop_last=True
-    )
-
-    val_loader = DataLoader(
-        val_ds,
-        batch_size=batch_size,
-        shuffle=False,
-        num_workers=num_workers,
-        pin_memory=True
-    )
-
-    test_loader = DataLoader(
-        test_ds,
-        batch_size=1,
-        shuffle=False,
-        num_workers=num_workers,
-        pin_memory=True
-    )
-
-    print(f"Dataset split:")
-    print(f"  Train: {len(train_ds)}")
-    print(f"  Val  : {len(val_ds)}")
-    print(f"  Test : {len(test_ds)}")
-
+    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True,
+                            num_workers=num_workers, pin_memory=True, drop_last=True)
+    val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False,
+                          num_workers=num_workers, pin_memory=True)
+    test_loader = DataLoader(test_ds, batch_size=1, shuffle=False,
+                           num_workers=num_workers, pin_memory=True)
+    
+    print(f"Final dataset sizes:")
+    print(f" Train: {len(train_ds)}")
+    print(f" Val:   {len(val_ds)}")
+    print(f" Test:  {len(test_ds)}")
+    
     return train_loader, val_loader, test_loader
+
+
+def read_txt_file(file_path: str) -> List[str]:
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"Stratified split file not found: {file_path}")
+    with open(file_path, 'r') as f:
+        return [line.strip() for line in f.readlines()]
+
+# def create_sugarbeets_dataloaders(
+#     data_root: str,
+#     batch_size: int = 8,
+#     num_workers: int = 4,
+#     use_rgbnir: bool = True,
+#     target_size: Tuple[int, int] = (966, 1296),
+#     nir_drop_prob: float = 0.0,
+#     seed: int = 42
+# ) -> Tuple[DataLoader, DataLoader, DataLoader]:
+
+#     # ---------------------------
+#     # Create FULL dataset (no split here)
+#     # ---------------------------
+#     full_ds = SugarBeetDataset(
+#         root=data_root,
+#         split="train",          # only controls augmentation
+#         use_rgbnir=use_rgbnir,
+#         target_size=target_size,
+#         augment=True,
+#         nir_drop_prob=nir_drop_prob
+#     )
+
+#     n = len(full_ds)
+#     indices = np.arange(n)
+
+#     # Reproducible shuffle
+#     rng = np.random.default_rng(seed)
+#     rng.shuffle(indices)
+
+#     # ---------------------------
+#     # Split sizes
+#     # ---------------------------
+#     n_train = int(0.8 * n)
+#     n_val   = int(0.1 * n)
+#     n_test  = n - n_train - n_val
+
+#     train_idx = indices[:n_train]
+#     val_idx   = indices[n_train:n_train + n_val]
+#     test_idx  = indices[n_train + n_val:]
+
+#     # ---------------------------
+#     # Create subsets
+#     # ---------------------------
+#     train_ds = Subset(full_ds, train_idx)
+
+#     # Validation & test must NOT augment
+#     val_base = SugarBeetDataset(
+#         root=data_root,
+#         split="val",
+#         use_rgbnir=use_rgbnir,
+#         target_size=target_size,
+#         augment=False
+#     )
+#     test_base = SugarBeetDataset(
+#         root=data_root,
+#         split="test",
+#         use_rgbnir=use_rgbnir,
+#         target_size=target_size,
+#         augment=False
+#     )
+
+#     val_ds  = Subset(val_base, val_idx)
+#     test_ds = Subset(test_base, test_idx)
+
+#     # ---------------------------
+#     # DataLoaders
+#     # ---------------------------
+#     train_loader = DataLoader(
+#         train_ds,
+#         batch_size=batch_size,
+#         shuffle=True,
+#         num_workers=num_workers,
+#         pin_memory=True,
+#         drop_last=True
+#     )
+
+#     val_loader = DataLoader(
+#         val_ds,
+#         batch_size=batch_size,
+#         shuffle=False,
+#         num_workers=num_workers,
+#         pin_memory=True
+#     )
+
+#     test_loader = DataLoader(
+#         test_ds,
+#         batch_size=1,
+#         shuffle=False,
+#         num_workers=num_workers,
+#         pin_memory=True
+#     )
+
+#     print(f"Dataset split:")
+#     print(f"  Train: {len(train_ds)}")
+#     print(f"  Val  : {len(val_ds)}")
+#     print(f"  Test : {len(test_ds)}")
+
+#     return train_loader, val_loader, test_loader
 
 

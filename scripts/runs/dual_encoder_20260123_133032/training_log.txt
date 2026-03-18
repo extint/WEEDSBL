@@ -1,0 +1,1 @@
+Epoch 1: Train Loss=0.1774, Train IoU=0.6180, Val Loss=0.1310, Val IoU=0.6902, LR=4.88e-05

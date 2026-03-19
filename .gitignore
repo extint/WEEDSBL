@@ -11,3 +11,5 @@ distill_experiments_weedsgalore
 distill1_experiments
 scripts/__pycache__
 train
+scripts/dual_encoder/runs
+scripts/sota/outputs

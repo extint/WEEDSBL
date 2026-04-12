@@ -1,0 +1,43 @@
+====================================================================================================
+STRATIFIED REPORT  —  metrics by weed head count and dominant weed size
+====================================================================================================
+
+  DetRate     = detection recall  (TP+leniency) / (TP+leniency+FN)
+  FA          = false alarm rate  FP / (effective pred count)
+  WeedF1      = pixel-level weed F1
+  DetF1       = instance-level detection F1  2·P·R/(P+R)
+  Leniency    = mean small-weed leniency matches per image
+  Size breaks : tiny<200px²  small=200–800  medium=800–3000  large≥3000
+
+BY WEED HEAD COUNT (gt_count buckets)
+  --------------------------------------------------------------------------------------------------
+  Bucket                     n    DetRate       FA    WeedF1    DetF1   Leniency/img
+  --------------------------------------------------------------------------------------------------
+  0                       n= 800  DetRate=0.000  FA=0.017  WeedF1=0.000  DetF1=  nan  Leniency/img=  nan
+  1                       n=  94  DetRate=1.000  FA=0.059  WeedF1=0.891  DetF1=  nan  Leniency/img=  nan
+  2-3                     n= 474  DetRate=0.999  FA=0.011  WeedF1=0.842  DetF1=  nan  Leniency/img=  nan
+  4-6                     n=1416  DetRate=0.999  FA=0.008  WeedF1=0.791  DetF1=  nan  Leniency/img=  nan
+  7-10                    n=1401  DetRate=0.998  FA=0.006  WeedF1=0.785  DetF1=  nan  Leniency/img=  nan
+  11+                     n= 615  DetRate=1.000  FA=0.005  WeedF1=0.782  DetF1=  nan  Leniency/img=  nan
+
+BY DOMINANT WEED HEAD SIZE (of GT instances in image)
+  --------------------------------------------------------------------------------------------------
+  Bucket                     n    DetRate       FA    WeedF1    DetF1   Leniency/img
+  --------------------------------------------------------------------------------------------------
+  tiny (<200 px)          n=2854  DetRate=0.999  FA=0.006  WeedF1=0.783  DetF1=  nan  Leniency/img=  nan
+  small (200-800)         n= 724  DetRate=0.999  FA=0.009  WeedF1=0.802  DetF1=  nan  Leniency/img=  nan
+  medium (800-3000)       n= 174  DetRate=0.999  FA=0.011  WeedF1=0.820  DetF1=  nan  Leniency/img=  nan
+  large (3000+)           n= 248  DetRate=0.999  FA=0.027  WeedF1=0.904  DetF1=  nan  Leniency/img=  nan
+  (images with 0 GT weeds excluded from size table: 800)
+
+CROSS-TABLE: mean DetRate  [count bucket × size bucket]
+       Count        tiny       small      medium       large
+  ----------------------------------------------------------
+           0           —           —           —           —
+           1       1.000       1.000       1.000       1.000
+         2-3       1.000       1.000       1.000       0.998
+         4-6       0.999       0.998       0.996       1.000
+        7-10       0.998       1.000       1.000           —
+         11+       1.000       1.000           —           —
+
+====================================================================================================

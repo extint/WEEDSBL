@@ -235,7 +235,7 @@ Gate std: {gate_resized.std():.3f}
 from dual_encoder.architecture import DualEncoderAFFNet
 
 # Import data loader
-from dual_encoder.dual_encoder_data_loader import create_dual_encoder_dataloaders
+from scripts.dual_encoder.dual_encoder_data_loader_veg import create_dual_encoder_dataloaders
 
 model = DualEncoderAFFNet(rgb_base_ch=32, nir_base_ch=16, num_classes=1, embed_dim=64)
 model.load_state_dict(torch.load("checkpoints_dual_encoder/best_dual_encoder.pth"))

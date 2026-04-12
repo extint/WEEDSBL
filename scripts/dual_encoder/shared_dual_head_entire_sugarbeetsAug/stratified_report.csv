@@ -1,0 +1,11 @@
+stratify,bucket,n,det_rate,fa_rate,weed_f1,det_f1,leniency
+count,0,800,0.000,0.017,0.000,nan,nan
+count,1,94,1.000,0.059,0.891,nan,nan
+count,2-3,474,0.999,0.011,0.842,nan,nan
+count,4-6,1416,0.999,0.008,0.791,nan,nan
+count,7-10,1401,0.998,0.006,0.785,nan,nan
+count,11+,615,1.000,0.005,0.782,nan,nan
+size,tiny (<200 px),2854,0.999,0.006,0.783,nan,nan
+size,small (200-800),724,0.999,0.009,0.802,nan,nan
+size,medium (800-3000),174,0.999,0.011,0.820,nan,nan
+size,large (3000+),248,0.999,0.027,0.904,nan,nan

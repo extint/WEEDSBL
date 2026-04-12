@@ -16,11 +16,11 @@ def save_bboxes_to_json(split_file, output_json):
     """
     with open(split_file) as f:
         image_ids = [l.strip() for l in f.readlines()]
-
     all_data = []
+    # print(image_ids[0])
+    # image_ids = ["bonirob_2016-05-23-10-57-33_4_frame31","bonirob_2016-05-23-10-52-28_3_frame34_vflip"]
 
     print(f"\nProcessing {len(image_ids)} images from {split_file}")
-    
     for img_id in tqdm(image_ids, desc="Extracting bboxes"):
         rgb_path = os.path.join(RGB_DIR, 'rgb_' + img_id + IMG_EXT)
         nir_path = os.path.join(NIR_DIR, 'nir_' + img_id + IMG_EXT)
@@ -43,6 +43,7 @@ def save_bboxes_to_json(split_file, output_json):
             continue
 
         bboxes = prepare_bbox_samples(
+            img_id = img_id,
             rgb=rgb,
             nir=nir,
             gt_mask=gt_mask,

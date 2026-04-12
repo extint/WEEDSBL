@@ -39,6 +39,7 @@ class BboxDataset(Dataset):
                 raise FileNotFoundError(f"Mask not found: {mask_path}")
 
             bboxes = prepare_bbox_samples(
+                img_id,
                 rgb=rgb,
                 nir=nir,
                 gt_mask=gt_mask,

@@ -1,0 +1,44 @@
+====================================================================
+SHARED DUAL-HEAD  —  FULL DATASET EVALUATION   n=480 images
+====================================================================
+
+PIXEL-LEVEL  (aggregated confusion matrix)
+  Global accuracy : 0.9869
+
+  Class     Precision     Recall       F1     Dice  Boundary F1
+  -------------------------------------------------------------
+  BG           0.9928     0.9938   0.9933   0.9933       0.8543
+  Crop         0.9552     0.9598   0.9575   0.9575       0.8287
+  Weed         0.8562     0.8218   0.8386   0.8386       0.5845
+  -------------------------------------------------------------
+  Macro        0.9347     0.9251   0.9298
+
+INSTANCE-LEVEL  (mean ± std per image)
+  Metric                             Mean      Std
+  ------------------------------------------------
+  Weed GT count                     7.448    4.940
+  Weed pred count                  16.004   13.239
+  Weed detection rate               0.667    0.348
+  Weed false alarm rate             0.111    0.156
+  Weed centroid dist (px)          17.266   10.638
+  Weed size ratio                   0.676    0.482
+  Crop GT count                     2.050    0.982
+  Crop pred count                   2.985    1.741
+  Crop detection rate               0.961    0.174
+  Crop false alarm rate             0.106    0.198
+
+PER-IMAGE PIXEL  (mean ± std)
+  Metric                             Mean      Std
+  ------------------------------------------------
+  Weed F1                          0.6330   0.3190
+  Weed Dice                        0.6330   0.3190
+  Weed Precision                   0.6562   0.3277
+  Weed Recall                      0.6153   0.3146
+  Weed Boundary F1                 0.5845   0.2894
+  Crop F1                          0.9080   0.1763
+  Crop Dice                        0.9080   0.1763
+  Crop Precision                   0.9113   0.1695
+  Crop Recall                      0.9123   0.1779
+  Global Accuracy                  0.9869   0.0093
+
+====================================================================

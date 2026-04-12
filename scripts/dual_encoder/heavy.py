@@ -355,10 +355,10 @@ class HeavyAugmentedDualEncoderDataset(Dataset):
         self.crops_per_image = crops_per_image if split == "train" else 1
         self.augment = augment and split == "train"
         
-        self.rgb_dir = os.path.join(root, "RGB")
-        self.ms_dir = os.path.join(root, "Multispectral")
-        self.mask_dir = os.path.join(root, "Masks")
-        self.meta_dir = os.path.join(root, "Metadata")
+        self.rgb_dir = os.path.join(root, "rgb")
+        self.ms_dir = os.path.join(root, "nir")
+        self.mask_dir = os.path.join(root, "masks")
+        self.meta_dir = os.path.join(root, "splits")
         
         # Load filename mappings
         self.orig2std, self.std2orig = self._load_filename_mapping()

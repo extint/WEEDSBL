@@ -1,295 +1,202 @@
-#!/usr/bin/env python3
-"""
-Inference script for Dual-Encoder RGB-NIR Crop/Weed Segmentation.
-Loads model, processes RGB+NIR inputs, and saves prediction mask overlay.
-"""
-
 import os
-import argparse
 import cv2
-import numpy as np
 import torch
-import torch.nn.functional as F
-from pathlib import Path
+import numpy as np
 
-# Import your model
 from dual_encoder.updated_architecture import DualEncoderAFFNet
 
 
-class DualEncoderInference:
-    def __init__(self, checkpoint_path, device='cuda', rgb_base_ch=32, nir_base_ch=16):
-        """
-        Args:
-            checkpoint_path: Path to trained model weights (.pth)
-            device: 'cuda' or 'cpu'
-            rgb_base_ch, nir_base_ch: Must match training config
-        """
-        self.device = torch.device(device if torch.cuda.is_available() else 'cpu')
-        
-        print(f"[INFO] Loading model from: {checkpoint_path}")
+class Inference:
+    def __init__(self, checkpoint, device="cuda", target_size=(640, 640)):
+        self.device = torch.device(device if torch.cuda.is_available() else "cpu")
+        self.target_size = target_size
+
+        print(f"[INFO] Loading model: {checkpoint}")
+
         self.model = DualEncoderAFFNet(
             rgb_variant='small',
             nir_base_ch=20,
             num_classes=1,
             embed_dim=96
-        ).to(device)
-        
-        # Load weights
-        checkpoint = torch.load(checkpoint_path, map_location=self.device)
+        ).to(self.device)
 
-        # If checkpoint was saved as a dict (training-style)
-        if 'model_state_dict' in checkpoint:
-            state_dict = checkpoint['model_state_dict']
-        else:
-            # fallback if someone saved only model.state_dict()
-            state_dict = checkpoint
-
-        self.model.load_state_dict(state_dict, strict=True)
-
-
-        # state_dict = torch.load(checkpoint_path, map_location=self.device)
-        # self.model.load_state_dict(state_dict)
+        ckpt = torch.load(checkpoint, map_location=self.device)
+        state_dict = ckpt["model_state_dict"] if "model_state_dict" in ckpt else ckpt
+        self.model.load_state_dict(state_dict)
         self.model.eval()
-        
-        print(f"[INFO] Model loaded on {self.device}")
-        
-        # ImageNet normalization (same as training)
+
+        print("[INFO] Model loaded")
+
         self.rgb_mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)
         self.rgb_std = np.array([0.229, 0.224, 0.225], dtype=np.float32)
-    
-    def load_and_preprocess(self, rgb_path, nir_path, target_size=None):
-        """
-        Load RGB and NIR images and preprocess.
-        
-        Args:
-            rgb_path: Path to RGB image (.jpg, .png)
-            nir_path: Path to NIR image (.tif, .png)
-            target_size: (H, W) or None (uses original size)
-        
-        Returns:
-            rgb_tensor: (1, 3, H, W)
-            nir_tensor: (1, 1, H, W)
-            original_size: (orig_H, orig_W) for resizing output back
-        """
-        # Load RGB
-        rgb = cv2.imread(rgb_path, cv2.IMREAD_COLOR)
-        if rgb is None:
-            raise FileNotFoundError(f"RGB image not found: {rgb_path}")
-        rgb = cv2.cvtColor(rgb, cv2.COLOR_BGR2RGB)
-        original_size = rgb.shape[:2]
-        
-        # Load NIR
+
+    def _scale_uint(self, img):
+        if img.dtype == np.uint16:
+            return img.astype(np.float32) / 65535.0
+        return img.astype(np.float32) / 255.0
+
+    def preprocess(self, rgb_path, nir_path):
+        # --- Load ---
+        rgb = cv2.imread(rgb_path)
         nir = cv2.imread(nir_path, cv2.IMREAD_UNCHANGED)
+
+        if rgb is None:
+            raise FileNotFoundError(rgb_path)
         if nir is None:
-            raise FileNotFoundError(f"NIR image not found: {nir_path}")
+            raise FileNotFoundError(nir_path)
+
+        rgb = cv2.cvtColor(rgb, cv2.COLOR_BGR2RGB)
+
         if nir.ndim == 3:
             nir = cv2.cvtColor(nir, cv2.COLOR_BGR2GRAY)
-        
-        # Align NIR to RGB size if needed
-        if nir.shape[:2] != rgb.shape[:2]:
-            nir = cv2.resize(nir, (rgb.shape[1], rgb.shape[0]), interpolation=cv2.INTER_LINEAR)
-        
-        # Resize if target_size specified
-        if target_size is not None:
-            H, W = target_size
-            rgb = cv2.resize(rgb, (W, H), interpolation=cv2.INTER_LINEAR)
-            nir = cv2.resize(nir, (W, H), interpolation=cv2.INTER_LINEAR)
-        
-        # Scale to [0, 1]
-        rgb = rgb.astype(np.float32)
-        nir = nir.astype(np.float32)
-        
-        if rgb.max() > 1.0:
-            rgb /= 255.0
-        if nir.max() > 1.0:
-            # Handle uint16 NIR
-            if nir.max() > 255:
-                nir /= 65535.0
-            else:
-                nir /= 255.0
-        
-        # Normalize RGB with ImageNet stats
+
+        orig_size = rgb.shape[:2]
+
+        # --- Resize (same as training) ---
+        H, W = self.target_size
+        rgb = cv2.resize(rgb, (W, H))
+        nir = cv2.resize(nir, (W, H))
+
+        # --- Scale ---
+        rgb = self._scale_uint(rgb)
+        nir = self._scale_uint(nir)
+
+        # --- Normalize RGB ---
         rgb = (rgb - self.rgb_mean) / self.rgb_std
-        
-        # To tensor
-        rgb_tensor = torch.from_numpy(rgb.transpose(2, 0, 1)).float().unsqueeze(0)  # (1, 3, H, W)
-        nir_tensor = torch.from_numpy(nir).float().unsqueeze(0).unsqueeze(0)       # (1, 1, H, W)
-        
-        return rgb_tensor.to(self.device), nir_tensor.to(self.device), original_size
-    
+
+        # --- To tensor ---
+        rgb = torch.from_numpy(rgb.transpose(2, 0, 1)).float().unsqueeze(0)
+        nir = torch.from_numpy(nir[None, ...]).float().unsqueeze(0)
+
+        print("NIR dtype:", nir.dtype)
+        print("NIR min/max:", nir.min(), nir.max())
+        return rgb.to(self.device), nir.to(self.device), orig_size
+
     @torch.no_grad()
-    def predict(self, rgb_tensor, nir_tensor, threshold=0.5):
-        """
-        Run inference.
-        
-        Args:
-            rgb_tensor: (1, 3, H, W)
-            nir_tensor: (1, 1, H, W)
-            threshold: Binary threshold for mask
-        
-        Returns:
-            pred_mask: (H, W) numpy array, binary mask
-            pred_prob: (H, W) numpy array, continuous probabilities
-        """
-        logits = self.model(rgb_tensor, nir_tensor)  # (1, 1, H, W)
-        probs = torch.sigmoid(logits).cpu().numpy()[0, 0]  # (H, W)
+    def run(self, rgb_path, nir_path, out_dir="output", threshold=0.5):
+        os.makedirs(out_dir, exist_ok=True)
+
+        rgb_t, nir_t, orig_size = self.preprocess(rgb_path, nir_path)
+
+        # --- Forward ---
+        logits = self.model(rgb_t, nir_t)
+        ()
+        probs = torch.sigmoid(logits)[0, 0].cpu().numpy()
+
+        print(f"[DEBUG] prob stats → min: {probs.min():.4f}, max: {probs.max():.4f}, mean: {probs.mean():.4f}")
+
         mask = (probs > threshold).astype(np.uint8)
-        return mask, probs
-    
-    def create_overlay(self, rgb_path, mask, alpha=0.5):
-        """
-        Create visualization with mask overlay on RGB.
-        
-        Args:
-            rgb_path: Path to original RGB (for loading unprocessed version)
-            mask: (H, W) binary mask
-            alpha: Overlay transparency
-        
-        Returns:
-            overlay: (H, W, 3) RGB image with mask overlay
-        """
-        # Load original RGB
-        rgb = cv2.imread(rgb_path, cv2.IMREAD_COLOR)
-        rgb = cv2.cvtColor(rgb, cv2.COLOR_BGR2RGB)
-        
-        # Resize mask to match original if needed
-        if mask.shape[:2] != rgb.shape[:2]:
-            mask = cv2.resize(mask, (rgb.shape[1], rgb.shape[0]), interpolation=cv2.INTER_NEAREST)
-        
-        # Create colored mask: green=crop(0), red=weed(1)
-        overlay = rgb.copy()
-        
-        # Weed regions: red overlay
-        weed_mask = mask == 1
-        overlay[weed_mask] = overlay[weed_mask] * (1 - alpha) + np.array([255, 0, 0]) * alpha
-        
-        # Optional: highlight crop with slight green tint
-        crop_mask = mask == 0
-        overlay[crop_mask] = overlay[crop_mask] * (1 - alpha*0.3) + np.array([0, 255, 0]) * (alpha*0.3)
-        
-        return overlay.astype(np.uint8)
-    
-    def save_outputs(self, rgb_path, mask, probs, output_dir, base_name=None):
-        """
-        Save all outputs: mask, overlay, probability map.
-        
-        Args:
-            rgb_path: Original RGB path
-            mask: Binary mask
-            probs: Probability map
-            output_dir: Directory to save outputs
-            base_name: Output filename base (auto-generated if None)
-        """
-        os.makedirs(output_dir, exist_ok=True)
-        
-        if base_name is None:
-            base_name = Path(rgb_path).stem
-        
-        # 1. Save binary mask
-        mask_path = os.path.join(output_dir, f"{base_name}_mask.png")
-        cv2.imwrite(mask_path, (mask * 255).astype(np.uint8))
-        print(f"[INFO] Saved mask: {mask_path}")
-        
-        # 2. Save overlay
-        overlay = self.create_overlay(rgb_path, mask, alpha=0.5)
-        overlay_path = os.path.join(output_dir, f"{base_name}_overlay.png")
-        cv2.imwrite(overlay_path, cv2.cvtColor(overlay, cv2.COLOR_RGB2BGR))
-        print(f"[INFO] Saved overlay: {overlay_path}")
-        
-        # 3. Save probability heatmap
-        prob_colored = (probs * 255).astype(np.uint8)
-        prob_colored = cv2.applyColorMap(prob_colored, cv2.COLORMAP_JET)
-        prob_path = os.path.join(output_dir, f"{base_name}_prob.png")
-        cv2.imwrite(prob_path, prob_colored)
-        print(f"[INFO] Saved probability map: {prob_path}")
-        
-        # 4. Save combined visualization
+
+        # --- Resize back ---
+        H0, W0 = orig_size
+        mask_resized = cv2.resize(mask, (W0, H0), interpolation=cv2.INTER_NEAREST)
+        probs_resized = cv2.resize(probs, (W0, H0))
+
+        # --- Save ---
+        base = os.path.splitext(os.path.basename(rgb_path))[0]
+
+        cv2.imwrite(os.path.join(out_dir, f"{base}_mask.png"), mask_resized * 255)
+
+        heatmap = cv2.applyColorMap((probs_resized * 255).astype(np.uint8), cv2.COLORMAP_JET)
+        cv2.imwrite(os.path.join(out_dir, f"{base}_prob.png"), heatmap)
+
+        # --- Overlay ---
         rgb_orig = cv2.imread(rgb_path)
-        rgb_orig = cv2.cvtColor(rgb_orig, cv2.COLOR_BGR2RGB)
-        
-        # Resize all to same size
-        H, W = rgb_orig.shape[:2]
-        overlay_resized = cv2.resize(overlay, (W, H))
-        prob_resized = cv2.resize(prob_colored, (W, H))
-        mask_resized = cv2.resize((mask * 255).astype(np.uint8), (W, H), interpolation=cv2.INTER_NEAREST)
-        mask_rgb = cv2.cvtColor(mask_resized, cv2.COLOR_GRAY2RGB)
-        
-        # Create side-by-side
-        combined = np.hstack([rgb_orig, overlay_resized, mask_rgb, cv2.cvtColor(prob_resized, cv2.COLOR_BGR2RGB)])
-        combined_path = os.path.join(output_dir, f"{base_name}_combined.png")
-        cv2.imwrite(combined_path, cv2.cvtColor(combined, cv2.COLOR_RGB2BGR))
-        print(f"[INFO] Saved combined: {combined_path}")
+        overlay = rgb_orig.copy()
+
+        overlay[mask_resized == 1] = [0, 0, 255]  # red
+
+        cv2.imwrite(os.path.join(out_dir, f"{base}_overlay.png"), overlay)
+
+        # --- Stats ---
+        weed = mask_resized.sum()
+        total = mask_resized.size
+        print(f"\n[RESULT]")
+        print(f"Weed %: {weed/total*100:.2f}%")
+
+        return mask_resized, probs_resized
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Dual-Encoder RGB-NIR Inference")
-    
-    parser.add_argument('--checkpoint', type=str,
-                       help='Path to trained model checkpoint (.pth)'
-                       , default= "runs/dual_encoder_20260122_235537/checkpoints/best_model.pth")
-    parser.add_argument('--rgb', type=str,
-                       help='Path to RGB input image',
-                       default= "/home/vjti-comp/Downloads/A Dataset of Aligned RGB and Multispectral UAV Ima(1)/A Dataset of Aligned RGB and Multispectral UAV Ima/WeedyRice-RGBMS-DB/RGB/DJI_DateTime_2024_06_02_13_42_0035_lat_10.3040603_lon_105.2619317_alt_20.018m.JPG")
-    parser.add_argument('--nir', type=str,
-                       help='Path to NIR input image',
-                       default="/home/vjti-comp/Downloads/A Dataset of Aligned RGB and Multispectral UAV Ima(1)/A Dataset of Aligned RGB and Multispectral UAV Ima/WeedyRice-RGBMS-DB/Multispectral/DJI_DateTime_2024_06_02_13_42_0035_lat_10.3040603_lon_105.2619317_alt_20.018m_NIR.TIF")
-    parser.add_argument('--output_dir', type=str, default='dual_encoder/inference_output',
-                       help='Directory to save outputs (default: dual_encoder/inference_output)')
-    parser.add_argument('--threshold', type=float, default=0.67,
-                       help='Binary threshold for segmentation (default: 0.5)')
-    parser.add_argument('--target_size', type=int, nargs=2, default=None,
-                       help='Resize input to [H W], e.g., --target_size 512 512 (default: original size)')
-    parser.add_argument('--device', type=str, default='cuda',
-                       help='Device: cuda or cpu (default: cuda)')
-    parser.add_argument('--rgb_base_ch', type=int, default=32,
-                       help='RGB encoder base channels (must match training, default: 32)')
-    parser.add_argument('--nir_base_ch', type=int, default=16,
-                       help='NIR encoder base channels (must match training, default: 16)')
-    
-    args = parser.parse_args()
-    
-    # Validate inputs
-    if not os.path.exists(args.rgb):
-        raise FileNotFoundError(f"RGB image not found: {args.rgb}")
-    if not os.path.exists(args.nir):
-        raise FileNotFoundError(f"NIR image not found: {args.nir}")
-    if not os.path.exists(args.checkpoint):
-        raise FileNotFoundError(f"Checkpoint not found: {args.checkpoint}")
-    
-    # Initialize inference
-    inference = DualEncoderInference(
-        checkpoint_path=args.checkpoint,
-        device=args.device,
-        rgb_base_ch=args.rgb_base_ch,
-        nir_base_ch=args.nir_base_ch
-    )
-    
-    # Load and preprocess
-    print(f"[INFO] Loading images...")
-    target_size = tuple(args.target_size) if args.target_size else None
-    rgb_tensor, nir_tensor, original_size = inference.load_and_preprocess(
-        args.rgb, args.nir, target_size=target_size
-    )
-    
-    # Predict
-    print(f"[INFO] Running inference...")
-    mask, probs = inference.predict(rgb_tensor, nir_tensor, threshold=args.threshold)
-    
-    # Compute stats
-    weed_pixels = (mask == 1).sum()
-    crop_pixels = (mask == 0).sum()
-    total_pixels = mask.size
-    weed_pct = weed_pixels / total_pixels * 100
-    
-    print(f"\n[RESULTS]")
-    print(f"  Weed coverage: {weed_pct:.2f}% ({weed_pixels} pixels)")
-    print(f"  Crop coverage: {100-weed_pct:.2f}% ({crop_pixels} pixels)")
-    
-    # Save outputs
-    inference.save_outputs(args.rgb, mask, probs, args.output_dir)
-    
-    print(f"\n[DONE] All outputs saved to: {args.output_dir}/")
-
+# ================== RUN ==================
 
 if __name__ == "__main__":
-    main()
+    CHECKPOINT = "/home/vjti-comp/WEEDSBL/scripts/dual_encoder/runs/dual_encoder_20260322_193044/checkpoints/best_model.pth"
+    RGB = "/home/vjti-comp/Downloads/SUGARBEETS_AUGMENTED_DATASET/rgb/rgb_bonirob_2016-05-23-10-52-28_3_frame34_vflip.png"
+    NIR = "/home/vjti-comp/Downloads/SUGARBEETS_AUGMENTED_DATASET/nir/nir_bonirob_2016-05-23-10-52-28_3_frame34_vflip.png"
+
+    infer = Inference(CHECKPOINT)
+    infer.run(RGB, NIR)
+
+# def main():
+#     parser = argparse.ArgumentParser(description="Dual-Encoder RGB-NIR Inference")
+    
+#     parser.add_argument('--checkpoint', type=str,
+#                        help='Path to trained model checkpoint (.pth)'
+#                        , default= "/home/vjti-comp/WEEDSBL/scripts/dual_encoder/runs/dual_encoder_20260322_193044/checkpoints/best_model.pth")
+#     parser.add_argument('--rgb', type=str,
+#                        help='Path to RGB input image',
+#                        default= "/home/vjti-comp/Downloads/SUGARBEETS_AUGMENTED_DATASET/rgb/rgb_bonirob_2016-05-23-10-52-28_3_frame34_vflip.png")
+#     parser.add_argument('--nir', type=str,
+#                        help='Path to NIR input image',
+#                        default="/home/vjti-comp/Downloads/SUGARBEETS_AUGMENTED_DATASET/nir/nir_bonirob_2016-05-23-10-52-28_3_frame34_vflip.png")
+#     parser.add_argument('--output_dir', type=str, default='dual_encoder/inference_output',
+#                        help='Directory to save outputs (default: dual_encoder/inference_output)')
+#     parser.add_argument('--threshold', type=float, default=0.5,
+#                        help='Binary threshold for segmentation (default: 0.5)')
+#     parser.add_argument('--target_size', type=int, nargs=2, default=(640, 640),
+#                        help='Resize input to [H W], e.g., --target_size 640 640 (default: original size)')
+#     parser.add_argument('--device', type=str, default='cuda',
+#                        help='Device: cuda or cpu (default: cuda)')
+#     parser.add_argument('--rgb_base_ch', type=int, default=32,
+#                        help='RGB encoder base channels (must match training, default: 32)')
+#     parser.add_argument('--nir_base_ch', type=int, default=16,
+#                        help='NIR encoder base channels (must match training, default: 16)')
+    
+#     args = parser.parse_args()
+    
+#     # Validate inputs
+#     if not os.path.exists(args.rgb):
+#         raise FileNotFoundError(f"RGB image not found: {args.rgb}")
+#     if not os.path.exists(args.nir):
+#         raise FileNotFoundError(f"NIR image not found: {args.nir}")
+#     if not os.path.exists(args.checkpoint):
+#         raise FileNotFoundError(f"Checkpoint not found: {args.checkpoint}")
+    
+#     # Initialize inference
+#     inference = DualEncoderInference(
+#         checkpoint_path=args.checkpoint,
+#         device=args.device,
+#         rgb_base_ch=args.rgb_base_ch,
+#         nir_base_ch=args.nir_base_ch
+#     )
+    
+#     # Load and preprocess
+#     print(f"[INFO] Loading images...")
+#     target_size = tuple(args.target_size) if args.target_size else None
+#     rgb_tensor, nir_tensor, original_size = inference.load_and_preprocess(
+#         args.rgb, args.nir, target_size=target_size
+#     )
+#     print("RGB range:", rgb_tensor.min().item(), rgb_tensor.max().item())
+#     print("NIR range:", nir_tensor.min().item(), nir_tensor.max().item())
+#         # Predict
+#     print(f"[INFO] Running inference...")
+#     mask, probs = inference.predict(rgb_tensor, nir_tensor, threshold=args.threshold)
+    
+#     # Compute stats
+#     weed_pixels = (mask == 1).sum()
+#     crop_pixels = (mask == 0).sum()
+#     total_pixels = mask.size
+#     weed_pct = weed_pixels / total_pixels * 100
+    
+#     print(f"\n[RESULTS]")
+#     print(f"  Weed coverage: {weed_pct:.2f}% ({weed_pixels} pixels)")
+#     print(f"  Crop coverage: {100-weed_pct:.2f}% ({crop_pixels} pixels)")
+    
+#     # Save outputs
+#     inference.save_outputs(args.rgb, mask, probs, args.output_dir)
+    
+#     print(f"\n[DONE] All outputs saved to: {args.output_dir}/")
+
+
+# if __name__ == "__main__":
+#     main()

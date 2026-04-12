@@ -7,7 +7,7 @@ except:
     pass
 
 checkpoint = torch.load(
-    "/home/vjti-comp/WEEDSBL/scripts/dual_encoder/runs/dual_encoder_20260122_235537/checkpoints/best_model.pth",
+    "/home/vjti-comp/WEEDSBL/scripts/sota/experiments/sugarbeets_unet_4ch_RGBNIR_20260326_232548/checkpoints/best_model.pth",
     weights_only=False
 )
 

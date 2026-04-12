@@ -6,8 +6,8 @@ from tqdm import tqdm
 import albumentations as A
 
 # Configuration
-SOURCE_DIR = "/home/vjtiadmin/Desktop/BTechGroup/SUGARBEETS_AUG_MIXED_DATASET"
-OUTPUT_DIR = "/home/vjtiadmin/Desktop/BTechGroup/SUGARBEETS_AUGMENTED_DATASET"
+SOURCE_DIR = "/home/vjti-comp/Downloads/SUGARBEETS_AUG_MIXED_DATASET"
+OUTPUT_DIR = "/home/vjti-comp/Downloads/SUGARBEETS_AUGMENTED_DATASET"
 
 # Folder names
 RGB_FOLDER = "rgb"

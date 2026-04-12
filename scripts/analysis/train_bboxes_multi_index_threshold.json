@@ -1,0 +1,334 @@
+[
+  {
+    "img_id": "bonirob_2016-05-23-10-57-33_4_frame31",
+    "image_shape": [
+      966,
+      1296
+    ],
+    "num_bboxes": 14,
+    "bboxes": [
+      {
+        "bbox": [
+          435,
+          35,
+          492,
+          86
+        ],
+        "label": 1,
+        "label_name": "weed",
+        "width": 57,
+        "height": 51,
+        "area": 2907
+      },
+      {
+        "bbox": [
+          0,
+          59,
+          57,
+          114
+        ],
+        "label": 1,
+        "label_name": "weed",
+        "width": 57,
+        "height": 55,
+        "area": 3135
+      },
+      {
+        "bbox": [
+          457,
+          215,
+          542,
+          261
+        ],
+        "label": 1,
+        "label_name": "weed",
+        "width": 85,
+        "height": 46,
+        "area": 3910
+      },
+      {
+        "bbox": [
+          749,
+          321,
+          791,
+          351
+        ],
+        "label": 1,
+        "label_name": "weed",
+        "width": 42,
+        "height": 30,
+        "area": 1260
+      },
+      {
+        "bbox": [
+          480,
+          356,
+          491,
+          373
+        ],
+        "label": 1,
+        "label_name": "weed",
+        "width": 11,
+        "height": 17,
+        "area": 187
+      },
+      {
+        "bbox": [
+          471,
+          377,
+          508,
+          398
+        ],
+        "label": 1,
+        "label_name": "weed",
+        "width": 37,
+        "height": 21,
+        "area": 777
+      },
+      {
+        "bbox": [
+          882,
+          381,
+          997,
+          474
+        ],
+        "label": 1,
+        "label_name": "weed",
+        "width": 115,
+        "height": 93,
+        "area": 10695
+      },
+      {
+        "bbox": [
+          610,
+          400,
+          663,
+          456
+        ],
+        "label": 1,
+        "label_name": "weed",
+        "width": 53,
+        "height": 56,
+        "area": 2968
+      },
+      {
+        "bbox": [
+          391,
+          469,
+          478,
+          521
+        ],
+        "label": 1,
+        "label_name": "weed",
+        "width": 87,
+        "height": 52,
+        "area": 4524
+      },
+      {
+        "bbox": [
+          641,
+          477,
+          1005,
+          907
+        ],
+        "label": 1,
+        "label_name": "weed",
+        "width": 364,
+        "height": 430,
+        "area": 156520
+      },
+      {
+        "bbox": [
+          512,
+          521,
+          552,
+          547
+        ],
+        "label": 1,
+        "label_name": "weed",
+        "width": 40,
+        "height": 26,
+        "area": 1040
+      },
+      {
+        "bbox": [
+          13,
+          611,
+          133,
+          759
+        ],
+        "label": 1,
+        "label_name": "weed",
+        "width": 120,
+        "height": 148,
+        "area": 17760
+      },
+      {
+        "bbox": [
+          126,
+          627,
+          779,
+          965
+        ],
+        "label": 0,
+        "label_name": "crop",
+        "width": 653,
+        "height": 338,
+        "area": 220714
+      },
+      {
+        "bbox": [
+          545,
+          758,
+          609,
+          816
+        ],
+        "label": 1,
+        "label_name": "weed",
+        "width": 64,
+        "height": 58,
+        "area": 3712
+      }
+    ]
+  },
+  {
+    "img_id": "bonirob_2016-05-23-10-52-28_3_frame34_vflip",
+    "image_shape": [
+      966,
+      1296
+    ],
+    "num_bboxes": 10,
+    "bboxes": [
+      {
+        "bbox": [
+          527,
+          0,
+          647,
+          131
+        ],
+        "label": 0,
+        "label_name": "crop",
+        "width": 120,
+        "height": 131,
+        "area": 15720
+      },
+      {
+        "bbox": [
+          651,
+          0,
+          776,
+          169
+        ],
+        "label": 0,
+        "label_name": "crop",
+        "width": 125,
+        "height": 169,
+        "area": 21125
+      },
+      {
+        "bbox": [
+          85,
+          59,
+          416,
+          407
+        ],
+        "label": 1,
+        "label_name": "weed",
+        "width": 331,
+        "height": 348,
+        "area": 115188
+      },
+      {
+        "bbox": [
+          1174,
+          444,
+          1202,
+          464
+        ],
+        "label": 1,
+        "label_name": "weed",
+        "width": 28,
+        "height": 20,
+        "area": 560
+      },
+      {
+        "bbox": [
+          868,
+          456,
+          1222,
+          658
+        ],
+        "label": 1,
+        "label_name": "weed",
+        "width": 354,
+        "height": 202,
+        "area": 71508
+      },
+      {
+        "bbox": [
+          948,
+          472,
+          998,
+          536
+        ],
+        "label": 1,
+        "label_name": "weed",
+        "width": 50,
+        "height": 64,
+        "area": 3200
+      },
+      {
+        "bbox": [
+          681,
+          543,
+          703,
+          566
+        ],
+        "label": 1,
+        "label_name": "weed",
+        "width": 22,
+        "height": 23,
+        "area": 506
+      },
+      {
+        "bbox": [
+          433,
+          606,
+          461,
+          627
+        ],
+        "label": 1,
+        "label_name": "weed",
+        "width": 28,
+        "height": 21,
+        "area": 588
+      },
+      {
+        "bbox": [
+          9,
+          826,
+          51,
+          856
+        ],
+        "label": 1,
+        "label_name": "weed",
+        "width": 42,
+        "height": 30,
+        "area": 1260
+      },
+      {
+        "bbox": [
+          1066,
+          918,
+          1092,
+          942
+        ],
+        "label": 1,
+        "label_name": "weed",
+        "width": 26,
+        "height": 24,
+        "area": 624
+      }
+    ]
+  }
+]

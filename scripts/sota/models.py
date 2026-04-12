@@ -16,8 +16,8 @@ import torch.nn.functional as F
 # 1. DeepLabV3+ (Highly effective for agricultural segmentation)
 # ==============================================================================
 class ASPP(nn.Module):
-    """Atrous Spatial Pyramid Pooling"""
-    def __init__(self, in_channels, out_channels=256):
+    """Atrous Spatial Pyramid Pooling with flexible base channels"""
+    def __init__(self, in_channels, out_channels):
         super(ASPP, self).__init__()
 
         # Different dilation rates
@@ -74,41 +74,46 @@ class ASPP(nn.Module):
         x = self.conv_out(x)
         return x
 
-
 class DeepLabV3Plus(nn.Module):
-    """DeepLabV3+ - Excellent for crop-weed segmentation"""
-    def __init__(self, in_channels=3, out_channels=3):
+    """DeepLabV3+ with base_ch control to manage GPU VRAM"""
+    def __init__(self, in_channels=3, base_ch=64, out_channels=3):
         super(DeepLabV3Plus, self).__init__()
 
-        # Encoder
-        self.enc1 = self._make_layer(in_channels, 64)
-        self.enc2 = self._make_layer(64, 128)
-        self.enc3 = self._make_layer(128, 256)
-        self.enc4 = self._make_layer(256, 512)
+        # Encoder: Scaling [64, 128, 256, 512] -> [1, 2, 4, 8] * base_ch
+        self.enc1 = self._make_layer(in_channels, base_ch)
+        self.enc2 = self._make_layer(base_ch, base_ch * 2)
+        self.enc3 = self._make_layer(base_ch * 2, base_ch * 4)
+        self.enc4 = self._make_layer(base_ch * 4, base_ch * 8)
 
-        # ASPP Module
-        self.aspp = ASPP(512, 256)
+        # ASPP Module: Takes highest level features (base_ch * 8) 
+        # Output width is base_ch * 4
+        aspp_out_ch = base_ch * 4
+        self.aspp = ASPP(base_ch * 8, aspp_out_ch)
 
-        # Low-level feature processing
+        # Low-level feature processing (from enc2)
+        # Originally 128 -> 48. We scale 48 proportionally (~0.75 * base_ch)
+        low_level_out_ch = int(base_ch * 0.75) 
         self.low_level_conv = nn.Sequential(
-            nn.Conv2d(128, 48, 1, bias=False),
-            nn.BatchNorm2d(48),
+            nn.Conv2d(base_ch * 2, low_level_out_ch, 1, bias=False),
+            nn.BatchNorm2d(low_level_out_ch),
             nn.ReLU(inplace=True)
         )
 
         # Decoder
+        # Input: ASPP output + low level features
+        concat_ch = aspp_out_ch + low_level_out_ch
         self.decoder = nn.Sequential(
-            nn.Conv2d(304, 256, 3, padding=1, bias=False),
-            nn.BatchNorm2d(256),
+            nn.Conv2d(concat_ch, base_ch * 4, 3, padding=1, bias=False),
+            nn.BatchNorm2d(base_ch * 4),
             nn.ReLU(inplace=True),
             nn.Dropout(0.5),
-            nn.Conv2d(256, 256, 3, padding=1, bias=False),
-            nn.BatchNorm2d(256),
+            nn.Conv2d(base_ch * 4, base_ch * 4, 3, padding=1, bias=False),
+            nn.BatchNorm2d(base_ch * 4),
             nn.ReLU(inplace=True),
             nn.Dropout(0.1)
         )
 
-        self.final = nn.Conv2d(256, out_channels, 1)
+        self.final = nn.Conv2d(base_ch * 4, out_channels, 1)
 
     def _make_layer(self, in_channels, out_channels):
         return nn.Sequential(
@@ -124,23 +129,27 @@ class DeepLabV3Plus(nn.Module):
         size = x.shape[2:]
 
         # Encoder
-        enc1 = self.enc1(x)
-        enc2 = self.enc2(F.max_pool2d(enc1, 2))
-        enc3 = self.enc3(F.max_pool2d(enc2, 2))
-        enc4 = self.enc4(F.max_pool2d(enc3, 2))
+        e1 = self.enc1(x)                               # size / 1
+        e2 = self.enc2(F.max_pool2d(e1, 2))             # size / 2
+        e3 = self.enc3(F.max_pool2d(e2, 2))             # size / 4
+        e4 = self.enc4(F.max_pool2d(e3, 2))             # size / 8
 
-        # ASPP
-        aspp_out = self.aspp(F.max_pool2d(enc4, 2))
-        aspp_out = F.interpolate(aspp_out, size=enc2.shape[2:], mode='bilinear', align_corners=False)
+        # ASPP (Bottle neck)
+        aspp_out = self.aspp(F.max_pool2d(e4, 2))       # size / 16
+        
+        # Upsample ASPP to match low-level features (enc2)
+        aspp_out = F.interpolate(aspp_out, size=e2.shape[2:], mode='bilinear', align_corners=False)
 
         # Low-level features
-        low_level = self.low_level_conv(enc2)
+        low_level = self.low_level_conv(e2)
 
-        # Concatenate
+        # Concatenate ASPP + Low-level
         decoder_in = torch.cat([aspp_out, low_level], dim=1)
 
         # Decoder
         out = self.decoder(decoder_in)
+        
+        # Final upsample to original resolution
         out = F.interpolate(out, size=size, mode='bilinear', align_corners=False)
         out = self.final(out)
 
@@ -650,13 +659,185 @@ class UNet3Plus(nn.Module):
 
         return logits
 
+# -------------------------
+# Simple, flexible UNet
+# -------------------------
+class UNetDoubleConv(nn.Module):
+    def __init__(self, in_ch: int, out_ch: int):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Conv2d(in_ch, out_ch, 3, padding=1, bias=False),
+            nn.BatchNorm2d(out_ch),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(out_ch, out_ch, 3, padding=1, bias=False),
+            nn.BatchNorm2d(out_ch),
+            nn.ReLU(inplace=True),
+        )
+
+    def forward(self, x):
+        return self.net(x)
+
+class Down(nn.Module):
+    def __init__(self, in_ch: int, out_ch: int):
+        super().__init__()
+        self.pool = nn.MaxPool2d(2)
+        self.conv = UNetDoubleConv(in_ch, out_ch)
+
+    def forward(self, x):
+        return self.conv(self.pool(x))
+
+class Up(nn.Module):
+    def __init__(self, in_ch: int, out_ch: int):
+        super().__init__()
+        self.up = nn.ConvTranspose2d(in_ch, in_ch // 2, kernel_size=2, stride=2)
+        self.conv = UNetDoubleConv(in_ch, out_ch)
+
+    def forward(self, x1, x2):
+        x1 = self.up(x1)
+        # Pad if needed
+        diffY = x2.size(2) - x1.size(2)
+        diffX = x2.size(3) - x1.size(3)
+        if diffY != 0 or diffX != 0:
+            x1 = nn.functional.pad(x1, [diffX // 2, diffX - diffX // 2,
+                                        diffY // 2, diffY - diffY // 2])
+        x = torch.cat([x2, x1], dim=1)
+        return self.conv(x)
+
+class UNet(nn.Module):
+    def __init__(self, in_channels: int = 4, base_ch: int = 64, out_channels: int = 1):
+        super().__init__()
+        self.inc = UNetDoubleConv(in_channels, base_ch)
+        self.down1 = Down(base_ch, base_ch * 2)
+        self.down2 = Down(base_ch * 2, base_ch * 4)
+        self.down3 = Down(base_ch * 4, base_ch * 8)
+        self.down4 = Down(base_ch * 8, base_ch * 16)
+        self.up1 = Up(base_ch * 16, base_ch * 8)
+        self.up2 = Up(base_ch * 8, base_ch * 4)
+        self.up3 = Up(base_ch * 4, base_ch * 2)
+        self.up4 = Up(base_ch * 2, base_ch)
+        self.outc = nn.Conv2d(base_ch, out_channels, 1)
+
+    def forward(self, x):
+        x1 = self.inc(x)
+        x2 = self.down1(x1)
+        x3 = self.down2(x2)
+        x4 = self.down3(x3)
+        x5 = self.down4(x4)
+        x = self.up1(x5, x4)
+        x = self.up2(x, x3)
+        x = self.up3(x, x2)
+        x = self.up4(x, x1)
+        logits = self.outc(x)
+        return logits
+
+# LManet
+
+class SimpleChannelAttention(nn.Module):
+    def __init__(self, in_ch, reduction=16):
+        super().__init__()
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.fc = nn.Sequential(
+            nn.Conv2d(in_ch, max(in_ch // reduction, 1), 1, bias=False),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(max(in_ch // reduction, 1), in_ch, 1, bias=False)
+        )
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        att = self.sigmoid(self.fc(self.avg_pool(x)))
+        return x * att
+
+class LightAttentionBlock(nn.Module):
+    def __init__(self, in_ch):
+        super().__init__()
+        # Only use channel attention to save memory - skip spatial attention
+        self.ca = SimpleChannelAttention(in_ch)
+        
+    def forward(self, x):
+        return self.ca(x)
+
+class LightMANet(nn.Module):
+    """Memory-efficient MANet for 4-channel RGB+NIR input"""
+    def __init__(self, in_channels=4, num_classes=2, base_ch=16):  # Reduced base_ch
+        super().__init__()
+        # Lightweight encoder
+        self.conv1 = nn.Sequential(
+            nn.Conv2d(in_channels, base_ch, 7, stride=2, padding=3, bias=False),
+            nn.BatchNorm2d(base_ch),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(3, stride=2, padding=1)
+        )
+        
+        # Reduced encoder blocks
+        self.layer1 = self._make_layer(base_ch, base_ch, 1)      # Only 1 block per layer
+        self.layer2 = self._make_layer(base_ch, base_ch*2, 1, stride=2)
+        self.layer3 = self._make_layer(base_ch*2, base_ch*4, 1, stride=2)
+        self.layer4 = self._make_layer(base_ch*4, base_ch*8, 1, stride=2)
+        
+        # Simple decoder without skip connections to save memory
+        self.decoder = nn.Sequential(
+            nn.ConvTranspose2d(base_ch*8, base_ch*4, 4, stride=2, padding=1),
+            nn.BatchNorm2d(base_ch*4),
+            nn.ReLU(inplace=True),
+            
+            nn.ConvTranspose2d(base_ch*4, base_ch*2, 4, stride=2, padding=1),
+            nn.BatchNorm2d(base_ch*2),
+            nn.ReLU(inplace=True),
+            
+            nn.ConvTranspose2d(base_ch*2, base_ch, 4, stride=2, padding=1),
+            nn.BatchNorm2d(base_ch),
+            nn.ReLU(inplace=True),
+            
+            nn.ConvTranspose2d(base_ch, base_ch, 4, stride=4, padding=0),  # Back to input size
+            nn.BatchNorm2d(base_ch),
+            nn.ReLU(inplace=True),
+        )
+        
+        self.final = nn.Conv2d(base_ch, num_classes, 1)
+        
+    def _make_layer(self, in_ch, out_ch, blocks, stride=1):
+        layers = []
+        layers.append(nn.Sequential(
+            nn.Conv2d(in_ch, out_ch, 3, stride=stride, padding=1, bias=False),
+            nn.BatchNorm2d(out_ch),
+            nn.ReLU(inplace=True),
+            LightAttentionBlock(out_ch)  # Only channel attention
+        ))
+        return nn.Sequential(*layers)
+    
+    def forward(self, x):
+        # Store input size for final resize
+        input_size = x.shape[-2:]  # (H, W)
+        
+        # Encoder path
+        x = self.conv1(x)
+        x = self.layer1(x)
+        x = self.layer2(x)
+        x = self.layer3(x)
+        x = self.layer4(x)
+        
+        # Decoder
+        x = self.decoder(x)
+        
+        # Final convolution
+        logits = self.final(x)
+        
+        # *** FIX: Resize output to match input size exactly ***
+        logits = F.interpolate(
+            logits, 
+            size=input_size, 
+            mode='bilinear', 
+            align_corners=False
+        )
+        
+        return logits
 # ------------------------------
 # Factory functions expected by train.py
 # ------------------------------
 def create_model(architecture: str, in_channels: int = 4, num_classes: int = 1, base_ch: int = 32):
     arch = architecture.lower()
     if arch == "deeplabsv3+":
-        return DeepLabV3Plus(in_channels, num_classes)
+        return DeepLabV3Plus(in_channels, base_ch, num_classes)
     elif arch == "pspnet":
         return PSPNet(in_channels, num_classes)
     elif arch == "lightsegnet":
@@ -665,6 +846,10 @@ def create_model(architecture: str, in_channels: int = 4, num_classes: int = 1, 
         return UNetPlusPlus(in_channels, num_classes, base_ch)
     elif arch == "unet3+":
         return UNet3Plus(in_channels, num_classes, base_ch)
+    elif arch == "unet":
+        return UNet(in_channels, base_ch, num_classes)
+    elif arch == "lmanet":
+        return LightMANet(in_channels, num_classes, base_ch)
     else:
         raise ValueError(f"Unknown architecture '{architecture}'. Supported: 'pspnet'.")
 

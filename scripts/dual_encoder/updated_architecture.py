@@ -257,16 +257,24 @@ class RGBTransformerEncoder(nn.Module):
 # 2. LIGHTWEIGHT NIR ENCODER (Efficient ResNet-style)
 # ============================================================
 
+def _gn(num_ch: int, num_groups: int = 32) -> nn.GroupNorm:
+    """GroupNorm helper — falls back to fewer groups if channels < 32."""
+    groups = min(num_groups, num_ch)
+    while num_ch % groups != 0 and groups > 1:
+        groups -= 1
+    return nn.GroupNorm(groups, num_ch)
+
+
 class DepthwiseSeparableConv(nn.Module):
     """Depthwise separable conv for efficiency"""
     def __init__(self, in_ch, out_ch, stride=1):
         super().__init__()
-        self.depthwise = nn.Conv2d(in_ch, in_ch, kernel_size=3, stride=stride, 
+        self.depthwise = nn.Conv2d(in_ch, in_ch, kernel_size=3, stride=stride,
                                    padding=1, groups=in_ch, bias=False)
         self.pointwise = nn.Conv2d(in_ch, out_ch, kernel_size=1, bias=False)
-        self.bn = nn.BatchNorm2d(out_ch)
+        self.bn = _gn(out_ch)
         self.relu = nn.ReLU(inplace=True)
-    
+
     def forward(self, x):
         x = self.depthwise(x)
         x = self.pointwise(x)
@@ -280,34 +288,86 @@ class LightResBlock(nn.Module):
     def __init__(self, in_ch, out_ch, stride=1):
         super().__init__()
         self.conv1 = nn.Conv2d(in_ch, out_ch, 3, stride=stride, padding=1, bias=False)
-        self.bn1 = nn.BatchNorm2d(out_ch)
+        self.bn1 = _gn(out_ch)
         self.relu = nn.ReLU(inplace=True)
         self.conv2 = nn.Conv2d(out_ch, out_ch, 3, padding=1, bias=False)
-        self.bn2 = nn.BatchNorm2d(out_ch)
-        
+        self.bn2 = _gn(out_ch)
+
         self.downsample = None
         if stride != 1 or in_ch != out_ch:
             self.downsample = nn.Sequential(
                 nn.Conv2d(in_ch, out_ch, 1, stride=stride, bias=False),
-                nn.BatchNorm2d(out_ch)
+                _gn(out_ch)
             )
-    
+
     def forward(self, x):
         identity = x
-        
-        out = self.conv1(x)
-        out = self.bn1(out)
-        out = self.relu(out)
-        
-        out = self.conv2(out)
-        out = self.bn2(out)
-        
+        out = self.relu(self.bn1(self.conv1(x)))
+        out = self.bn2(self.conv2(out))
         if self.downsample is not None:
             identity = self.downsample(x)
-        
-        out += identity
-        out = self.relu(out)
-        return out
+        return self.relu(out + identity)
+
+
+# ============================================================
+# CBAM — Channel + Spatial attention for skip connections
+# ============================================================
+
+class CBAM(nn.Module):
+    """
+    Convolutional Block Attention Module.
+    Applied to fused features before decoder to recalibrate
+    channel importance and spatial focus.
+    """
+    def __init__(self, channels: int, reduction: int = 8):
+        super().__init__()
+        mid = max(channels // reduction, 4)
+        # Channel attention
+        self.ca_avg = nn.AdaptiveAvgPool2d(1)
+        self.ca_max = nn.AdaptiveMaxPool2d(1)
+        self.ca_fc = nn.Sequential(
+            nn.Conv2d(channels, mid, 1, bias=False),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(mid, channels, 1, bias=False),
+        )
+        # Spatial attention
+        self.sa_conv = nn.Conv2d(2, 1, kernel_size=7, padding=3, bias=False)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # Channel
+        ca = torch.sigmoid(self.ca_fc(self.ca_avg(x)) + self.ca_fc(self.ca_max(x)))
+        x = x * ca
+        # Spatial
+        sa = torch.sigmoid(self.sa_conv(
+            torch.cat([x.mean(dim=1, keepdim=True), x.amax(dim=1, keepdim=True)], dim=1)
+        ))
+        return x * sa
+
+
+# ============================================================
+# Auxiliary segmentation head for deep supervision
+# ============================================================
+
+class AuxHead(nn.Module):
+    """
+    Lightweight auxiliary head for deep supervision.
+    Attach at intermediate fused feature maps (F1 @ 1/8, F2 @ 1/16).
+    Loss weight: 0.4 * main_loss during training only.
+    """
+    def __init__(self, in_ch: int, num_classes: int):
+        super().__init__()
+        mid = in_ch // 2
+        self.head = nn.Sequential(
+            nn.Conv2d(in_ch, mid, 3, padding=1, bias=False),
+            _gn(mid),
+            nn.ReLU(inplace=True),
+            nn.Dropout2d(0.1),
+            nn.Conv2d(mid, num_classes, 1),
+        )
+
+    def forward(self, x: torch.Tensor, target_size) -> torch.Tensor:
+        return F.interpolate(self.head(x), size=target_size,
+                             mode='bilinear', align_corners=False)
 
 
 class NIRLightEncoder(nn.Module):
@@ -321,7 +381,7 @@ class NIRLightEncoder(nn.Module):
         # Initial conv: 1 -> base_ch
         self.stem = nn.Sequential(
             nn.Conv2d(1, base_ch, kernel_size=7, stride=2, padding=3, bias=False),
-            nn.BatchNorm2d(base_ch),
+            _gn(base_ch),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         )
@@ -495,16 +555,19 @@ class DualEncoderAFFNet(nn.Module):
         
         # Fusion at stages 1, 2, 3 (stride 8, 16, 32)
         fused_dims = [64, 128, 256]
-        
+
         self.proj1 = StageProjector(rgb_dims[1], nir_dims[1], fused_dims[0])
-        self.aff1 = AFFModule(fused_dims[0])
-        
+        self.aff1  = AFFModule(fused_dims[0])
+        self.cbam1 = CBAM(fused_dims[0])          # skip-connection attention
+
         self.proj2 = StageProjector(rgb_dims[2], nir_dims[2], fused_dims[1])
-        self.aff2 = AFFModule(fused_dims[1])
-        
+        self.aff2  = AFFModule(fused_dims[1])
+        self.cbam2 = CBAM(fused_dims[1])
+
         self.proj3 = StageProjector(rgb_dims[3], nir_dims[3], fused_dims[2])
-        self.aff3 = AFFModule(fused_dims[2])
-        
+        self.aff3  = AFFModule(fused_dims[2])
+        self.cbam3 = CBAM(fused_dims[2])
+
         # Decoder
         self.decoder = SimpleDecoder(
             in_ch2=fused_dims[0],
@@ -513,30 +576,45 @@ class DualEncoderAFFNet(nn.Module):
             embed_dim=embed_dim,
             num_classes=num_classes
         )
-    
+
+        # Deep supervision aux heads (used only during training)
+        # F1 @ 1/8 scale, F2 @ 1/16 scale
+        self.aux_head1 = AuxHead(fused_dims[0], num_classes)  # 1/8
+        self.aux_head2 = AuxHead(fused_dims[1], num_classes)  # 1/16
+
     def forward(self, x_rgb, x_nir):
         """
         x_rgb: (B, 3, H, W)
         x_nir: (B, 1, H, W)
+
+        Returns:
+          training : (logits, aux1, aux2)  — all at input resolution
+          eval     : logits only
         """
         input_size = x_rgb.shape[-2:]
-        
+
         # Encode
         R_feats = self.rgb_encoder(x_rgb)  # [stride4, 8, 16, 32]
-        N_feats = self.nir_encoder(x_nir)   # [stride4, 8, 16, 32]
-        
-        # Fuse stages 2, 3, 4 (stride 8, 16, 32)
+        N_feats = self.nir_encoder(x_nir)  # [stride4, 8, 16, 32]
+
+        # Fuse + CBAM attention on each scale
         r1, n1 = self.proj1(R_feats[1], N_feats[1])
-        F1 = self.aff1(r1, n1)
-        
+        F1 = self.cbam1(self.aff1(r1, n1))   # stride 8
+
         r2, n2 = self.proj2(R_feats[2], N_feats[2])
-        F2 = self.aff2(r2, n2)
-        
+        F2 = self.cbam2(self.aff2(r2, n2))   # stride 16
+
         r3, n3 = self.proj3(R_feats[3], N_feats[3])
-        F3 = self.aff3(r3, n3)
-        
-        # Decode
+        F3 = self.cbam3(self.aff3(r3, n3))   # stride 32
+
+        # Main decode
         logits = self.decoder(F1, F2, F3, input_size=input_size)
+
+        if self.training:
+            aux1 = self.aux_head1(F1, input_size)   # from 1/8 features
+            aux2 = self.aux_head2(F2, input_size)   # from 1/16 features
+            return logits, aux1, aux2
+
         return logits
 
 

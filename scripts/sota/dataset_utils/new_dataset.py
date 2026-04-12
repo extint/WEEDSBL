@@ -3,9 +3,9 @@ import shutil
 from pathlib import Path
 
 # Configuration
-INPUT_LIST = "/home/vjtiadmin/Desktop/BTechGroup/WEEDSBL/scripts/sota/dataset_utils/aug_mixed_images.txt"
-SOURCE_DIR = "/home/vjtiadmin/Desktop/BTechGroup/FINAL_SUGARBEETS_DATASET"  # Update this
-OUTPUT_DIR = "/home/vjtiadmin/Desktop/BTechGroup/SUGARBEETS_AUG_MIXED_DATASET"   # Update this
+INPUT_LIST = "/home/vjti-comp/WEEDSBL/scripts/sota/dataset_utils/aug_mixed_images.txt"
+SOURCE_DIR = "/home/vjti-comp/Downloads/FINAL_SUGARBEETS_DATASET"  # Update this
+OUTPUT_DIR = "/home/vjti-comp/Downloads/SUGARBEETS_AUG_MIXED_DATASET"   # Update this
 
 # Folder names
 RGB_FOLDER = "rgb"

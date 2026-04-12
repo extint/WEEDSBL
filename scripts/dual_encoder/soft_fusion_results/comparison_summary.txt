@@ -1,0 +1,197 @@
+============================================================
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+FINAL COMPARISON SUMMARY  (aggregated over all val images)
+Images evaluated: 480
+=
+
+── HARSH APPROACH (binary vegetation gate) ──
+  Harsh  - mIoU: 0.8559 | Global Acc: 0.9868 | mClassAcc: 0.9181
+          IoU [BG/Crop/Weed]: [0.990/0.878/0.700]
+          Acc [BG/Crop/Weed]: [0.995/0.937/0.822]
+          F1  [BG/Crop/Weed]: [0.995/0.935/0.824]
+          Mean Prec/Rec: 0.9175/0.9181
+
+── SOFT FUSION + POST-PROCESS ──
+  Soft   - mIoU: 0.8550 | Global Acc: 0.9867 | mClassAcc: 0.9155
+          IoU [BG/Crop/Weed]: [0.990/0.878/0.697]
+          Acc [BG/Crop/Weed]: [0.995/0.937/0.814]
+          F1  [BG/Crop/Weed]: [0.995/0.935/0.822]
+          Mean Prec/Rec: 0.9189/0.9155
+
+============================================================

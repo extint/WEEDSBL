@@ -124,7 +124,7 @@ def evaluate_pixel_metrics(model, dataset, device, class_names=['crop', 'weed'],
         # Step 1: NDVI and blobs (SAME AS TRAINING)
         ndvi = compute_ndvi(rgb, nir)
         veg_mask = ndvi_threshold(ndvi, NDVI_THRESH)
-        blobs = extract_blobs(veg_mask, min_area=MIN_BLOB_AREA)
+        blobs, label_map = extract_blobs(veg_mask, min_area=MIN_BLOB_AREA)
         
         pred_mask = np.zeros_like(gt_mask)
         

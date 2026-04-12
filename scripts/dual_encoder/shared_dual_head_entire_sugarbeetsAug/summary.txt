@@ -1,0 +1,44 @@
+====================================================================
+SHARED DUAL-HEAD  —  FULL DATASET EVALUATION   n=4800 images
+====================================================================
+
+PIXEL-LEVEL  (aggregated confusion matrix)
+  Global accuracy : 0.9850
+
+  Class     Precision     Recall       F1     Dice  Boundary F1
+  -------------------------------------------------------------
+  BG           0.9945     0.9893   0.9919   0.9919       0.8145
+  Crop         0.9423     0.9747   0.9582   0.9582       0.8097
+  Weed         0.8178     0.8904   0.8526   0.8526       0.6063
+  -------------------------------------------------------------
+  Macro        0.9182     0.9514   0.9342
+
+INSTANCE-LEVEL  (mean ± std per image)
+  Metric                             Mean      Std
+  ------------------------------------------------
+  Weed GT count                     5.785    3.958
+  Weed pred count                  10.255    8.316
+  Weed detection rate               0.832    0.372
+  Weed false alarm rate             0.010    0.068
+  Weed centroid dist (px)          18.379   19.731
+  Weed size ratio                   5.710   22.509
+  Crop GT count                     1.921    0.940
+  Crop pred count                   2.265    1.260
+  Crop detection rate               0.957    0.202
+  Crop false alarm rate             0.005    0.048
+
+PER-IMAGE PIXEL  (mean ± std)
+  Metric                             Mean      Std
+  ------------------------------------------------
+  Weed F1                          0.6630   0.3053
+  Weed Dice                        0.6630   0.3053
+  Weed Precision                   0.6334   0.2934
+  Weed Recall                      0.6986   0.3219
+  Weed Boundary F1                 0.6063   0.2752
+  Crop F1                          0.9003   0.1948
+  Crop Dice                        0.9003   0.1948
+  Crop Precision                   0.8843   0.1888
+  Crop Recall                      0.9199   0.2005
+  Global Accuracy                  0.9850   0.0101
+
+====================================================================

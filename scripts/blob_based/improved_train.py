@@ -162,7 +162,7 @@ def main():
     # Load datasets
     print("\n[1/4] Loading datasets...")
     train_ds = FastBboxDataset('analysis/train_bboxes_multi_index_threshold.json')
-    val_ds = FastBboxDataset('analysis/train_bboxes_multi_index_threshold.json')
+    val_ds = FastBboxDataset('analysis/val_bboxes_multi_index_threshold.json')
     
     print(f"  Train samples: {len(train_ds)}")
     print(f"  Val samples:   {len(val_ds)}")
@@ -201,7 +201,7 @@ def main():
     criterion = nn.CrossEntropyLoss(weight=class_weights)
     optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=1e-4)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode='max', factor=0.5, patience=5, verbose=True
+        optimizer, mode='max', factor=0.5, patience=5
     )
     
     # Metrics tracker

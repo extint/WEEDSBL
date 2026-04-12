@@ -128,7 +128,7 @@ def evaluate_pixel_metrics(model, dataset, device, class_names=['crop', 'weed'])
         veg_mask = ndvi_threshold(ndvi, NDVI_THRESH)
         
         # Step 2: Extract blobs (same as training)
-        blobs = extract_blobs(veg_mask, min_area=MIN_BLOB_AREA)
+        blobs, label_map = extract_blobs(veg_mask, min_area=MIN_BLOB_AREA)
         
         # Step 3: Initialize prediction mask as background
         pred_mask = np.zeros_like(gt_mask)
@@ -293,7 +293,8 @@ def main():
         run_dirs = [d for d in os.listdir(runs_dir) if d.startswith("bbox_training_")]
         if run_dirs:
             latest_run = sorted(run_dirs)[-1]
-            model_path = os.path.join(runs_dir, latest_run, "best_model.pth")
+            # model_path = os.path.join(runs_dir, latest_run, "best_model.pth")
+            model_path = "/home/vjti-comp/WEEDSBL/scripts/runs/bbox_training_20260320_133304/best_model.pth"
             print(f"Using: {model_path}")
         else:
             print("Error: No trained models found")

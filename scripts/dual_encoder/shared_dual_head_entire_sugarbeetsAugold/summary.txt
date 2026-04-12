@@ -1,0 +1,44 @@
+====================================================================
+SHARED DUAL-HEAD  —  FULL DATASET EVALUATION   n=4320 images
+====================================================================
+
+PIXEL-LEVEL  (aggregated confusion matrix)
+  Global accuracy : 0.9897
+
+  Class     Precision     Recall       F1     Dice  Boundary F1
+  -------------------------------------------------------------
+  BG           0.9953     0.9936   0.9944   0.9944       0.8716
+  Crop         0.9630     0.9672   0.9651   0.9651       0.8347
+  Weed         0.8880     0.9217   0.9045   0.9045       0.6774
+  -------------------------------------------------------------
+  Macro        0.9487     0.9608   0.9547
+
+INSTANCE-LEVEL  (mean ± std per image)
+  Metric                             Mean      Std
+  ------------------------------------------------
+  Weed GT count                    20.571   18.025
+  Weed pred count                  18.910   17.118
+  Weed detection rate               0.740    0.346
+  Weed false alarm rate             0.023    0.094
+  Weed centroid dist (px)           3.594    2.453
+  Weed size ratio                   1.518    0.534
+  Crop GT count                     2.208    1.186
+  Crop pred count                   2.417    1.472
+  Crop detection rate               0.954    0.198
+  Crop false alarm rate             0.054    0.149
+
+PER-IMAGE PIXEL  (mean ± std)
+  Metric                             Mean      Std
+  ------------------------------------------------
+  Weed F1                          0.7198   0.3261
+  Weed Dice                        0.7198   0.3261
+  Weed Precision                   0.7064   0.3200
+  Weed Recall                      0.7354   0.3348
+  Weed Boundary F1                 0.6774   0.3060
+  Crop F1                          0.9121   0.1867
+  Crop Dice                        0.9121   0.1867
+  Crop Precision                   0.9108   0.1850
+  Crop Recall                      0.9145   0.1883
+  Global Accuracy                  0.9897   0.0063
+
+====================================================================

@@ -1,6 +1,6 @@
 import os
 
-DATA_ROOT = "/home/vjtiadmin/Desktop/BTechGroup/SUGARBEETS_MIXED_DATASET"
+DATA_ROOT = "/home/vjti-comp/Downloads/SUGARBEETS_AUGMENTED_DATASET"
 
 RGB_DIR = os.path.join(DATA_ROOT, "rgb")
 NIR_DIR = os.path.join(DATA_ROOT, "nir")
@@ -11,10 +11,10 @@ BLOB_SIZE = 64          # CNN input size
 # MIN_BLOB_AREA = 100     # remove tiny noise blobs
 NUM_CLASSES = 2         # crop / weed
 
-NDVI_THRESH = 0.25     # tune this
+NDVI_THRESH = 0.4    # tune this
 MIN_BLOB_AREA = 100
 
 DEVICE = "cuda"
 BATCH_SIZE = 64
-EPOCHS = 30
+EPOCHS = 50
 LR = 1e-3

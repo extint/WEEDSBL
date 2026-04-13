@@ -14,7 +14,7 @@ train
 scripts/dual_encoder/runs
 scripts/sota/outputs
 scripts/sota/experiments
-scripts/runs]
+scripts/runs
 scripts/experiments
 scripts/experiments_distill
 scripts/dual_encoder/best_shared_dual_head.pth
@@ -25,3 +25,5 @@ scripts/pipeline_metrics-old
 scripts/pipeline_output
 scripts/inference_output
 scripts/best_crop_weed.pth
+scripts/dual_encoder/shared_dual_head_entire_sugarbeetsAug
+scripts/dual_encoder/experiments_distill

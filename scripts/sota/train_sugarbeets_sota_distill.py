@@ -43,7 +43,7 @@ from tqdm import tqdm
 
 # ── project imports ──────────────────────────────────────────────────────────
 from sota.sugarbeets_data_loader import create_sugarbeets_dataloaders
-from sota.models import DeepLabV3Plus, get_model_info
+from sota.models import LightUNet,DeepLabV3Plus, get_model_info
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Optional: thop for FLOPs (pip install thop). Falls back gracefully.

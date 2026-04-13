@@ -317,12 +317,9 @@ class TrainingLogger:
                 gates[stage_name] = module.last_gate.detach().cpu()
             return hook
         
-        if hasattr(self.model, 'aff1'):
-            hooks.append(self.model.aff1.register_forward_hook(make_hook('stage1')))
-        if hasattr(self.model, 'aff2'):
-            hooks.append(self.model.aff2.register_forward_hook(make_hook('stage2')))
-        if hasattr(self.model, 'aff3'):
-            hooks.append(self.model.aff3.register_forward_hook(make_hook('stage3')))
+        for _attr, _name in [('aff1','stage1'),('aff2','stage2'),('aff3','stage3'),('aff','stage1')]:
+            if hasattr(self.model, _attr):
+                hooks.append(getattr(self.model, _attr).register_forward_hook(make_hook(_name)))
         
         with torch.no_grad():
             for idx, sample in enumerate(self.vis_samples):
@@ -330,9 +327,9 @@ class TrainingLogger:
                 nir = sample['nir']
                 mask = sample['mask']
                 
-                # Forward pass — eval mode returns logits only (no aux heads)
+                # Forward pass
                 logits = self.model(rgb, nir)
-                pred = logits.argmax(dim=1)[0].cpu().numpy()  # (H,W) int {0,1,2}
+                pred = torch.sigmoid(logits).cpu().numpy()[0, 0]
                 
                 # Denormalize RGB for visualization
                 rgb_vis = self._denormalize_rgb(rgb)
@@ -367,89 +364,102 @@ class TrainingLogger:
         print(f"[Logger] Saved prediction visualizations for epoch {epoch}")
     
     def _create_prediction_figure(self, rgb, nir, gt, pred, gate, epoch, sample_idx):
-        """Create 3-class prediction visualization. pred: (H,W) int {0,1,2}"""
-        CLASS_NAMES = ['bg', 'crop', 'weed']
-
-        # Per-class IoU
-        ious = {}
-        for c, name in enumerate(CLASS_NAMES):
-            tp = ((pred == c) & (gt == c)).sum()
-            fp = ((pred == c) & (gt != c)).sum()
-            fn = ((pred != c) & (gt == c)).sum()
-            ious[name] = tp / (tp + fp + fn + 1e-6)
-        miou = float(np.mean(list(ious.values())))
-
-        # Pixel accuracy
-        acc = (pred == gt).mean()
-
+        """Create detailed prediction visualization"""
+        pred_binary = (pred > 0.5).astype(np.uint8)
+        
+        # Compute metrics
+        intersection = (pred_binary & gt).sum()
+        union = (pred_binary | gt).sum()
+        iou = intersection / (union + 1e-6)
+        
+        # Compute errors
+        fp = ((pred_binary == 1) & (gt == 0)).sum()
+        fn = ((pred_binary == 0) & (gt == 1)).sum()
+        tp = ((pred_binary == 1) & (gt == 1)).sum()
+        tn = ((pred_binary == 0) & (gt == 0)).sum()
+        
+        precision = tp / (tp + fp + 1e-6)
+        recall = tp / (tp + fn + 1e-6)
+        f1 = 2 * precision * recall / (precision + recall + 1e-6)
+        
+        # Create figure
         fig = plt.figure(figsize=(18, 12))
         gs = GridSpec(3, 3, figure=fig, hspace=0.3, wspace=0.3)
-
-        # Row 1: Inputs + GT
+        
+        # Row 1: Inputs
         ax1 = fig.add_subplot(gs[0, 0])
         ax1.imshow(rgb)
         ax1.set_title("RGB Input", fontsize=12, fontweight='bold')
         ax1.axis('off')
-
+        
         ax2 = fig.add_subplot(gs[0, 1])
         ax2.imshow(nir, cmap='gray')
         ax2.set_title("NIR Input", fontsize=12, fontweight='bold')
         ax2.axis('off')
-
+        
         ax3 = fig.add_subplot(gs[0, 2])
-        ax3.imshow(self._mask_to_color(gt))
-        ax3.set_title("Ground Truth\nGrey=BG  Green=Crop  Red=Weed", fontsize=11, fontweight='bold')
+        gt_colored = self._mask_to_color(gt)
+        ax3.imshow(gt_colored)
+        ax3.set_title("Ground Truth\n(Green=Vegetation, Grey=Background)", fontsize=12, fontweight='bold')
         ax3.axis('off')
-
-        # Row 2: Prediction + class maps + error
+        
+        # Row 2: Predictions
         ax4 = fig.add_subplot(gs[1, 0])
-        ax4.imshow(self._mask_to_color(pred))
-        ax4.set_title(f"Prediction\nmIoU={miou:.3f}  Acc={acc:.3f}", fontsize=11, fontweight='bold')
+        pred_colored = self._mask_to_color(pred_binary)
+        ax4.imshow(pred_colored)
+        ax4.set_title(f"Prediction (Vegetation)\nIoU: {iou:.3f}", fontsize=12, fontweight='bold')
         ax4.axis('off')
-
-        # Weed confidence (class 2 softmax would be ideal, but we only have argmax here)
-        weed_map = (pred == 2).astype(np.float32)
+        
         ax5 = fig.add_subplot(gs[1, 1])
-        im5 = ax5.imshow(weed_map, cmap='Reds', vmin=0, vmax=1)
-        ax5.set_title("Weed mask", fontsize=12, fontweight='bold')
+        im5 = ax5.imshow(pred, cmap='RdYlGn', vmin=0, vmax=1)
+        ax5.set_title("Confidence Map", fontsize=12, fontweight='bold')
         ax5.axis('off')
         plt.colorbar(im5, ax=ax5, fraction=0.046)
-
+        
         ax6 = fig.add_subplot(gs[1, 2])
-        ax6.imshow(self._create_error_map(pred, gt))
-        wrong = (pred != gt).sum()
-        ax6.set_title(f"Error Map\nGrey=OK  Cyan=FP  Yellow=FN  Magenta=WrongClass\n{wrong:,} wrong px", fontsize=9, fontweight='bold')
+        error_map = self._create_error_map(pred_binary, gt)
+        ax6.imshow(error_map)
+        ax6.set_title(f"Error Map\nFP:{fp}, FN:{fn}", fontsize=12, fontweight='bold')
         ax6.axis('off')
-
-        # Row 3: Attention gate + overlay + metrics text
+        
+        # Row 3: Attention and Metrics
         ax7 = fig.add_subplot(gs[2, 0])
         im7 = ax7.imshow(gate, cmap='RdYlGn', vmin=0, vmax=1)
-        ax7.set_title(f"Attention Gate (stage1)\nμ={gate.mean():.3f}", fontsize=11, fontweight='bold')
+        ax7.set_title(f"Attention Gate\nMean: {gate.mean():.3f}", fontsize=12, fontweight='bold')
         ax7.axis('off')
         plt.colorbar(im7, ax=ax7, fraction=0.046)
-
+        
         ax8 = fig.add_subplot(gs[2, 1])
         ax8.imshow(rgb)
         ax8.imshow(gate, cmap='RdYlGn', alpha=0.5, vmin=0, vmax=1)
         ax8.set_title("Gate Overlay", fontsize=12, fontweight='bold')
         ax8.axis('off')
-
+        
         ax9 = fig.add_subplot(gs[2, 2])
         ax9.axis('off')
-        metrics_text = (
-            f"Epoch {epoch}  Sample {sample_idx}\n\n"
-            f"mIoU   : {miou:.4f}\n"
-            f"Pix Acc: {acc:.4f}\n\n"
-            + "\n".join(f"IoU {n:<6}: {v:.4f}" for n, v in ious.items())
-            + f"\n\nGate μ={gate.mean():.3f} σ={gate.std():.3f}"
-        )
-        ax9.text(0.05, 0.95, metrics_text,
-                 transform=ax9.transAxes, fontsize=10,
-                 verticalalignment='top', fontfamily='monospace',
-                 bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
+        metrics_text = f"""
+Epoch: {epoch}  Sample: {sample_idx}
 
-        fig.suptitle(f"3-Class Prediction — Epoch {epoch}, Sample {sample_idx}",
-                     fontsize=14, fontweight='bold')
+Metrics:
+  IoU:       {iou:.4f}
+  Precision: {precision:.4f}
+  Recall:    {recall:.4f}
+  F1:        {f1:.4f}
+
+Confusion:
+  TP: {tp:,}  FP: {fp:,}
+  FN: {fn:,}  TN: {tn:,}
+
+Gate: μ={gate.mean():.3f}, σ={gate.std():.3f}
+        """
+        ax9.text(0.1, 0.95, metrics_text.strip(), 
+                transform=ax9.transAxes, fontsize=10,
+                verticalalignment='top', fontfamily='monospace',
+                bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
+        
+        fig.suptitle(f"Analysis - Epoch {epoch}, Sample {sample_idx}", 
+                    fontsize=14, fontweight='bold')
+        
         return fig
     
     def visualize_attention_gates_only(self, epoch):
@@ -464,12 +474,9 @@ class TrainingLogger:
                 gates[stage_name] = module.last_gate.detach().cpu()
             return hook
         
-        if hasattr(self.model, 'aff1'):
-            hooks.append(self.model.aff1.register_forward_hook(make_hook('stage1')))
-        if hasattr(self.model, 'aff2'):
-            hooks.append(self.model.aff2.register_forward_hook(make_hook('stage2')))
-        if hasattr(self.model, 'aff3'):
-            hooks.append(self.model.aff3.register_forward_hook(make_hook('stage3')))
+        for _attr, _name in [('aff1','stage1'),('aff2','stage2'),('aff3','stage3'),('aff','stage1')]:
+            if hasattr(self.model, _attr):
+                hooks.append(getattr(self.model, _attr).register_forward_hook(make_hook(_name)))
         
         with torch.no_grad():
             for idx, sample in enumerate(self.vis_samples):
@@ -482,7 +489,9 @@ class TrainingLogger:
                 nir_vis = nir[0, 0].cpu().numpy()
                 
                 num_stages = len(gates)
-                fig, axes = plt.subplots(2, num_stages + 1, figsize=(4*(num_stages+1), 8))
+                ncols = max(num_stages + 1, 2)  # ensure always 2D axes array
+                fig, axes = plt.subplots(2, ncols, figsize=(4*ncols, 8))
+                axes = np.array(axes).reshape(2, ncols)  # guarantee 2D
                 
                 axes[0, 0].imshow(rgb_vis)
                 axes[0, 0].set_title("RGB", fontweight='bold')
@@ -520,21 +529,20 @@ class TrainingLogger:
         print(f"[Logger] Saved attention gates for epoch {epoch}")
     
     def log_confusion_matrix(self, epoch, all_preds, all_targets):
-        """Log 3-class confusion matrix"""
+        """Log confusion matrix"""
         from sklearn.metrics import confusion_matrix
         import seaborn as sns
-
-        labels = [0, 1, 2]
-        class_names = ['Background', 'Crop', 'Weed']
-        cm = confusion_matrix(all_targets, all_preds, labels=labels)
-
+        
+        cm = confusion_matrix(all_targets, all_preds, labels=[0, 1])
+        
         fig, ax = plt.subplots(figsize=(8, 6))
-        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
-                    xticklabels=class_names, yticklabels=class_names, ax=ax)
+        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
+                   xticklabels=['Background', 'Vegetation'], 
+                   yticklabels=['Background', 'Vegetation'], ax=ax)
         ax.set_ylabel('True')
         ax.set_xlabel('Predicted')
-        ax.set_title(f'Confusion Matrix (3-class) — Epoch {epoch}')
-
+        ax.set_title(f'Confusion Matrix (Stage 1: Vegetation vs Background) - Epoch {epoch}')
+        
         self.writer.add_figure('Metrics/confusion_matrix', fig, epoch)
         plt.close()
     
@@ -596,23 +604,26 @@ class TrainingLogger:
     
     def _mask_to_color(self, mask):
         """
-        3-class mask → RGB colour:
-            0 = background → dark grey
-            1 = crop       → green
-            2 = weed       → red
+        Convert binary mask to colour for Stage 1 (vegetation vs background).
+            0 = background  → dark grey
+            1 = vegetation (crop + weed) → green
         """
-        colored = np.zeros((*mask.shape, 3), dtype=np.float32)
-        colored[mask == 0] = [0.15, 0.15, 0.15]
-        colored[mask == 1] = [0.2,  0.8,  0.2]
-        colored[mask == 2] = [0.9,  0.2,  0.2]
+        colored = np.zeros((*mask.shape, 3))
+        colored[mask == 0] = [0.15, 0.15, 0.15]   # background — dark grey
+        colored[mask == 1] = [0.2,  0.8,  0.2]    # vegetation — green
         return colored
     
     def _create_error_map(self, pred, gt):
-        """3-class error map: grey=correct, cyan=FP, yellow=FN, magenta=wrong class"""
-        error_map = np.ones((*pred.shape, 3), dtype=np.float32) * 0.9
-        error_map[(pred > 0) & (gt == 0)]  = [0.0, 1.0, 1.0]  # FP  cyan
-        error_map[(pred == 0) & (gt > 0)]  = [1.0, 1.0, 0.0]  # FN  yellow
-        error_map[(pred != gt) & (pred > 0) & (gt > 0)] = [0.8, 0.0, 0.8]  # wrong veg class  magenta
+        """Create error map"""
+        error_map = np.ones((*pred.shape, 3))
+        fp = (pred == 1) & (gt == 0)
+        fn = (pred == 0) & (gt == 1)
+        correct = (pred == gt)
+        
+        error_map[fp] = [0, 1, 1]  # cyan
+        error_map[fn] = [1, 1, 0]  # yellow
+        error_map[correct] = [0.9, 0.9, 0.9]
+        
         return error_map
     
     def close(self):

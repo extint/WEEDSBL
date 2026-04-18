@@ -1,0 +1,231 @@
+{
+  "metadata": {
+    "timestamp": "2026-04-18T17:26:42.733922",
+    "split": "test",
+    "num_models": 4,
+    "class_names": [
+      "background",
+      "crop",
+      "weed"
+    ],
+    "note": "Metrics computed on the TEST split \u2014 standard practice for research papers (val split is for model selection only)."
+  },
+  "models": {
+    "dual_encoder_mini": {
+      "efficiency": {
+        "total_params_M": 0.362,
+        "trainable_params_M": 0.362,
+        "model_memory_MB": 1.45,
+        "checkpoint_MB": 4.44,
+        "gflops": 4.494,
+        "input_resolution": "640x640",
+        "batch_size": 4,
+        "lat_mean_ms": 2.825,
+        "lat_std_ms": 0.219,
+        "lat_p50_ms": 2.754,
+        "lat_p95_ms": 3.251,
+        "lat_p99_ms": 3.605,
+        "throughput_img_s": 1415.86,
+        "gpu_peak_alloc_MB": 72.6,
+        "device": "cuda"
+      },
+      "segmentation": {
+        "pixel_accuracy": 0.9925,
+        "mean_accuracy": 0.9699,
+        "mean_iou": 0.9362,
+        "mean_dice": 0.9663,
+        "mean_precision": 0.9627,
+        "mean_recall": 0.9699,
+        "mean_f1": 0.9663
+      },
+      "per_class": {
+        "background": {
+          "iou": 0.9921,
+          "dice_f1": 0.996,
+          "precision": 0.9965,
+          "recall": 0.9955,
+          "f1": 0.996,
+          "specificity": 0.9619
+        },
+        "crop": {
+          "iou": 0.9522,
+          "dice_f1": 0.9755,
+          "precision": 0.9757,
+          "recall": 0.9753,
+          "f1": 0.9755,
+          "specificity": 0.9988
+        },
+        "weed": {
+          "iou": 0.8643,
+          "dice_f1": 0.9272,
+          "precision": 0.916,
+          "recall": 0.9387,
+          "f1": 0.9272,
+          "specificity": 0.9967
+        }
+      }
+    },
+    "deeplabv3_mobilenet": {
+      "efficiency": {
+        "total_params_M": 11.021,
+        "trainable_params_M": 11.021,
+        "model_memory_MB": 44.2,
+        "checkpoint_MB": 132.65,
+        "gflops": 47.999,
+        "input_resolution": "966x1296",
+        "batch_size": 4,
+        "lat_mean_ms": 8.847,
+        "lat_std_ms": 0.484,
+        "lat_p50_ms": 8.702,
+        "lat_p95_ms": 9.863,
+        "lat_p99_ms": 9.967,
+        "throughput_img_s": 452.12,
+        "gpu_peak_alloc_MB": 190.1,
+        "device": "cuda"
+      },
+      "segmentation": {
+        "pixel_accuracy": 0.9884,
+        "mean_accuracy": 0.9536,
+        "mean_iou": 0.9058,
+        "mean_dice": 0.9484,
+        "mean_precision": 0.9434,
+        "mean_recall": 0.9536,
+        "mean_f1": 0.9484
+      },
+      "per_class": {
+        "background": {
+          "iou": 0.9876,
+          "dice_f1": 0.9937,
+          "precision": 0.9946,
+          "recall": 0.9929,
+          "f1": 0.9937,
+          "specificity": 0.9452
+        },
+        "crop": {
+          "iou": 0.9415,
+          "dice_f1": 0.9699,
+          "precision": 0.9651,
+          "recall": 0.9747,
+          "f1": 0.9699,
+          "specificity": 0.998
+        },
+        "weed": {
+          "iou": 0.7883,
+          "dice_f1": 0.8816,
+          "precision": 0.8705,
+          "recall": 0.8931,
+          "f1": 0.8816,
+          "specificity": 0.995
+        }
+      }
+    },
+    "distilled_unet_from_deeplabsv3": {
+      "efficiency": {
+        "total_params_M": 0.487,
+        "trainable_params_M": 0.487,
+        "model_memory_MB": 1.95,
+        "checkpoint_MB": 5.94,
+        "gflops": "N/A",
+        "input_resolution": "640x640",
+        "batch_size": 4,
+        "lat_mean_ms": 2.88,
+        "lat_std_ms": 0.207,
+        "lat_p50_ms": 2.84,
+        "lat_p95_ms": 3.23,
+        "lat_p99_ms": 3.761,
+        "throughput_img_s": 1388.72,
+        "gpu_peak_alloc_MB": 81.2,
+        "device": "cuda"
+      },
+      "segmentation": {
+        "pixel_accuracy": 0.9812,
+        "mean_accuracy": 0.9222,
+        "mean_iou": 0.8473,
+        "mean_dice": 0.9123,
+        "mean_precision": 0.9043,
+        "mean_recall": 0.9222,
+        "mean_f1": 0.9123
+      },
+      "per_class": {
+        "background": {
+          "iou": 0.9822,
+          "dice_f1": 0.991,
+          "precision": 0.9923,
+          "recall": 0.9898,
+          "f1": 0.991,
+          "specificity": 0.9224
+        },
+        "crop": {
+          "iou": 0.878,
+          "dice_f1": 0.935,
+          "precision": 0.9535,
+          "recall": 0.9173,
+          "f1": 0.935,
+          "specificity": 0.9974
+        },
+        "weed": {
+          "iou": 0.6817,
+          "dice_f1": 0.8107,
+          "precision": 0.7671,
+          "recall": 0.8595,
+          "f1": 0.8107,
+          "specificity": 0.9903
+        }
+      }
+    },
+    "distilled_unet_from_dual": {
+      "efficiency": {
+        "total_params_M": 0.487,
+        "trainable_params_M": 0.487,
+        "model_memory_MB": 1.95,
+        "checkpoint_MB": 5.94,
+        "gflops": "N/A",
+        "input_resolution": "640x640",
+        "batch_size": 4,
+        "lat_mean_ms": 2.732,
+        "lat_std_ms": 0.295,
+        "lat_p50_ms": 2.672,
+        "lat_p95_ms": 2.875,
+        "lat_p99_ms": 3.847,
+        "throughput_img_s": 1464.1,
+        "gpu_peak_alloc_MB": 79.6,
+        "device": "cuda"
+      },
+      "segmentation": {
+        "pixel_accuracy": 0.9873,
+        "mean_accuracy": 0.9592,
+        "mean_iou": 0.8953,
+        "mean_dice": 0.9425,
+        "mean_precision": 0.9272,
+        "mean_recall": 0.9592,
+        "mean_f1": 0.9425
+      },
+      "per_class": {
+        "background": {
+          "iou": 0.9872,
+          "dice_f1": 0.9936,
+          "precision": 0.9961,
+          "recall": 0.9911,
+          "f1": 0.9936,
+          "specificity": 0.9569
+        },
+        "crop": {
+          "iou": 0.9214,
+          "dice_f1": 0.9591,
+          "precision": 0.9518,
+          "recall": 0.9666,
+          "f1": 0.9591,
+          "specificity": 0.9976
+        },
+        "weed": {
+          "iou": 0.7774,
+          "dice_f1": 0.8747,
+          "precision": 0.8337,
+          "recall": 0.92,
+          "f1": 0.8747,
+          "specificity": 0.993
+        }
+      }
+    }
+  }
+}

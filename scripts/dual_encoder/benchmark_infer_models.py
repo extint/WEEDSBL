@@ -280,7 +280,7 @@ def _fwd_deeplabv3(
 
 def _load_distilled_unet() -> nn.Module:
     """Original distilled UNet (from DeepLabV3 teacher)"""
-    from models import UNet as unetdeeplabs
+    from sota.models import UNet as unetdeeplabs
 
     ckpt_path = (
         "/home/vjti-comp/WEEDSBL/scripts/sota/experiments_distill/"
@@ -338,6 +338,12 @@ def _load_distilled_unet_from_dual() -> nn.Module:
         state_dict = {k[len("module."):]: v for k, v in state_dict.items()}
 
     # NO remapping — checkpoint matches current UNet (.double_conv.)
+
+    # 2. FIX: remap the old double_conv → new net naming
+    state_dict = {
+        k.replace(".double_conv.", ".net."): v for k, v in state_dict.items()
+    }
+
     missing, unexpected = model.load_state_dict(state_dict, strict=True)
 
     if missing or unexpected:
@@ -1526,54 +1532,117 @@ def visualize_predictions(
     device: str,
     output_dir: str,
     forward_fn: Optional[Callable] = None,
-    reference_indices: Optional[List[int]] = None,   # ← NEW: forces same images
+    reference_samples: Optional[List[Dict]] = None,   # NEW
+    loader_cfg: Optional[Dict] = None,                # NEW
 ) -> Tuple[str, List[Dict]]:
     """
-    Research-paper quality visualisation grid + individual images.
-    Now supports reference_indices to guarantee identical scenes across models.
+    Research-paper quality visualisation.
+    If reference_samples + loader_cfg are provided → forces the exact same scenes
+    as the first model (resizes input → runs inference → resizes pred back).
     """
     model.eval()
     os.makedirs(output_dir, exist_ok=True)
 
-    num_vis = min(cfg.num_vis_images, len(loader.dataset))
+    num_vis = min(cfg.num_vis_images, len(loader.dataset) if reference_samples is None else len(reference_samples))
     class_names = cfg.class_names
     num_classes = cfg.num_classes
     palette = _CLASS_COLORS[:num_classes]
 
-    # Use reference indices (from first model) if provided
-    if reference_indices is not None:
-        fixed_indices = reference_indices[:num_vis]
-    else:
-        fixed_indices = list(range(num_vis))
-
-    # ── Collect samples (forward pass once per image) ───────────────────────
     samples: List[Dict] = []
-    for idx in fixed_indices:
-        batch = loader.dataset[idx]
-        # Convert single sample → batched (B=1)
-        if isinstance(batch, dict):
-            batch = {
-                k: v.unsqueeze(0) if torch.is_tensor(v) else v
-                for k, v in batch.items()
-            }
 
-        rgb_b, nir_b, mask_b = _extract_vis_channels(batch)
+    # ── NEW: REFERENCE MODE (same images across all models) ─────────────────
+    if reference_samples is not None and loader_cfg is not None:
+        print(f"  [Visualise] {model_name} — using REFERENCE scenes (same input images for cross-model grid)")
 
-        fn = forward_fn if forward_fn is not None else _fwd_dual_encoder
-        logits, _ = fn(model, batch, device, cfg.use_amp)
-        logits = logits.cpu().float()
-        probs = F.softmax(logits, dim=1)
-        preds = probs.argmax(dim=1)
+        target_size = loader_cfg.get("target_size", cfg.target_size)
+        loader_type = loader_cfg.get("loader_type", "dual_encoder")
+        use_rgbnir = loader_cfg.get("use_rgbnir", True)
 
-        for i in range(rgb_b.shape[0]):
-            if len(samples) >= num_vis:
-                break
+        for ref in reference_samples[:num_vis]:
+            ref_rgb = ref["rgb"]      # (3, H_ref, W_ref)
+            ref_nir = ref["nir"]      # (1, H_ref, W_ref)
+            ref_gt  = ref["gt"]       # numpy (H_ref, W_ref)
+
+            ref_h, ref_w = ref_rgb.shape[1], ref_rgb.shape[2]
+
+            # Resize input to this model's trained resolution
+            if (ref_h, ref_w) != target_size:
+                rgb_input = F.interpolate(
+                    ref_rgb.unsqueeze(0).float().to(device),
+                    size=target_size, mode="bilinear", align_corners=False
+                ).squeeze(0)
+                nir_input = F.interpolate(
+                    ref_nir.unsqueeze(0).float().to(device),
+                    size=target_size, mode="bilinear", align_corners=False
+                ).squeeze(0)
+            else:
+                rgb_input = ref_rgb.to(device)
+                nir_input = ref_nir.to(device)
+
+            # Build batch exactly as this model's forward_fn expects
+            if loader_type == "dual_encoder":
+                batch = {
+                    "rgb": rgb_input.unsqueeze(0),
+                    "nir": nir_input.unsqueeze(0),
+                    "mask": torch.from_numpy(ref_gt).unsqueeze(0).long().to(device),
+                }
+            else:  # sugarbeets
+                if use_rgbnir:
+                    images = torch.cat([rgb_input, nir_input], dim=0).unsqueeze(0)  # (1,4,*,*)
+                else:
+                    images = rgb_input.unsqueeze(0)
+                batch = {
+                    "images": images.to(device),
+                    "labels": torch.from_numpy(ref_gt).unsqueeze(0).long().to(device),
+                }
+
+            # Run inference
+            fn = forward_fn if forward_fn is not None else _fwd_dual_encoder
+            logits, _ = fn(model, batch, device, cfg.use_amp)
+            logits = logits.cpu().float()
+            preds = F.softmax(logits, dim=1).argmax(dim=1).squeeze(0).numpy()
+
+            # Resize prediction back to reference resolution (class map → nearest)
+            if preds.shape != (ref_h, ref_w):
+                pred_tensor = torch.from_numpy(preds).unsqueeze(0).unsqueeze(0).float()
+                pred_resized = F.interpolate(
+                    pred_tensor, size=(ref_h, ref_w), mode="nearest"
+                ).squeeze(0).squeeze(0).numpy().astype(np.int64)
+                preds = pred_resized
+
             samples.append({
-                "rgb":  rgb_b[i],
-                "nir":  nir_b[i],
-                "gt":   mask_b[i].numpy(),
-                "pred": preds[i].numpy(),
+                "rgb": ref_rgb,
+                "nir": ref_nir,
+                "gt": ref_gt,
+                "pred": preds,
             })
+
+    # ── ORIGINAL MODE (per-model loader, used only for the first model) ─────
+    else:
+        # Use first N samples from this model's own loader
+        fixed_indices = list(range(min(num_vis, len(loader.dataset))))
+        for idx in fixed_indices:
+            batch = loader.dataset[idx]
+            if isinstance(batch, dict):
+                batch = {k: v.unsqueeze(0) if torch.is_tensor(v) else v for k, v in batch.items()}
+
+            rgb_b, nir_b, mask_b = _extract_vis_channels(batch)
+
+            fn = forward_fn if forward_fn is not None else _fwd_dual_encoder
+            logits, _ = fn(model, batch, device, cfg.use_amp)
+            logits = logits.cpu().float()
+            probs = F.softmax(logits, dim=1)
+            preds = probs.argmax(dim=1)
+
+            for i in range(rgb_b.shape[0]):
+                if len(samples) >= num_vis:
+                    break
+                samples.append({
+                    "rgb":  rgb_b[i],
+                    "nir":  nir_b[i],
+                    "gt":   mask_b[i].numpy(),
+                    "pred": preds[i].numpy(),
+                })
 
     # ── Best-3 grid per model (unchanged) ───────────────────────────────────
     for s in samples:
@@ -2054,9 +2123,9 @@ def main():
                              "0=disabled. Requires scipy.")
     parser.add_argument("--ablation",     action="store_true",
                         help="Run λ ablation study. Requires --ablation-teacher.")
-    parser.add_argument("--ablation-student", type=str, default="distilled_unet_from_dual",
+    parser.add_argument("--ablation-student", type=str, default="distilled_unet_from_deeplabsv3",
                         help="Model name (in registry) to use as student for ablation.")
-    parser.add_argument("--ablation-teacher", type=str, default="dual_encoder_mini",
+    parser.add_argument("--ablation-teacher", type=str, default="deeplabv3_mobilenet",
                         help="Model name (in registry) to use as teacher for ablation.")
     parser.add_argument("--efficiency",    action="store_true",
                         help="Run batch=1 latency benchmark for each model (saves efficiency_benchmark.csv).")
@@ -2097,7 +2166,7 @@ def main():
     _loader_cache: Dict[str, DataLoader] = {}   # cache by loader_type+target_size
 
     all_model_samples: Dict[str, List[Dict]] = {}
-
+    reference_samples = None   # ← ADD THIS
     for name in to_run:
         desc = MODEL_REGISTRY[name]
         lc   = desc.loader_cfg
@@ -2137,19 +2206,33 @@ def main():
         if not args.no_vis:
             print(f"\n[Visualise] {name}  ({CFG.num_vis_images} images)…")
             
-            # First model becomes the REFERENCE (guarantees same images)
-            reference_indices = None if not all_model_samples else list(range(CFG.num_vis_images))
-            
-            _, model_samples = visualize_predictions(
-                model_name=name,
-                model=model,
-                loader=loader,
-                cfg=CFG,
-                device=device,
-                output_dir=str(vis_dir),
-                forward_fn=desc.forward_fn,
-                reference_indices=reference_indices,   # ← this fixes the mismatch
-            )
+            if reference_samples is None:
+                # First model → becomes the reference
+                _, model_samples = visualize_predictions(
+                    model_name=name,
+                    model=model,
+                    loader=loader,
+                    cfg=CFG,
+                    device=device,
+                    output_dir=str(vis_dir),
+                    forward_fn=desc.forward_fn,
+                    reference_samples=None,
+                    loader_cfg=None,
+                )
+                reference_samples = [s.copy() for s in model_samples]  # safe copy
+            else:
+                # All other models → force same scenes as first model
+                _, model_samples = visualize_predictions(
+                    model_name=name,
+                    model=model,
+                    loader=loader,
+                    cfg=CFG,
+                    device=device,
+                    output_dir=str(vis_dir),
+                    forward_fn=desc.forward_fn,
+                    reference_samples=reference_samples,
+                    loader_cfg=desc.loader_cfg,
+                )
             all_model_samples[name] = model_samples
 
         # Free GPU memory between models

@@ -1,0 +1,36 @@
+{
+  "teacher_ckpt": "/home/vjti-comp/WEEDSBL/scripts/sota/experiments/sugarbeets_deeplabv3_mobilenet_4ch_RGBNIR_20260413_000804/checkpoints/best_model.pth",
+  "data_root": "/home/vjti-comp/Downloads/SUGARBEETS_AUGMENTED_DATASET",
+  "output_dir": "./experiments_distill",
+  "exp_name": "distill_deeplabv3_mobilenet_UNet_S16_20260413_203900",
+  "resume": null,
+  "teacher_arch": "deeplabv3_mobilenet",
+  "teacher_rgbnir": true,
+  "student_base_ch": 16,
+  "height": 966,
+  "width": 1296,
+  "batch_size": 4,
+  "num_workers": 4,
+  "epochs": 100,
+  "lr": 0.0003,
+  "warmup_epochs": 5,
+  "min_lr": 1e-06,
+  "weight_decay": 0.0001,
+  "w_task": 1.0,
+  "w_kd": 0.5,
+  "kd_temp": 4.0,
+  "class_weights": [
+    0.3,
+    1.0,
+    3.0
+  ],
+  "vis_samples": 5,
+  "vis_every": 10,
+  "class_names": [
+    "background",
+    "crop",
+    "weed"
+  ],
+  "teacher": "deeplabv3_mobilenet",
+  "student": "UNet"
+}

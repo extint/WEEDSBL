@@ -26,9 +26,9 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 # Import dataset loader
-from sota.sugarbeets_data_loader import create_sugarbeets_dataloaders
+from sugarbeets_data_loader import create_sugarbeets_dataloaders
 
-from sota.models import create_model, get_model_info
+from models import create_model, get_model_info
 
 
 # ======================== Loss Functions ========================
@@ -379,9 +379,9 @@ def main():
         description="Train Sugar Beets Weed Segmentation Model"
     )
 
-    parser.add_argument("--model", type=str, default="lmanet",
-                        choices=["deeplabsv3+", "lmanet"])
-    parser.add_argument("--base_ch", type=int, default=16)
+    parser.add_argument("--model", type=str, default="unet",
+                        choices=["deeplabsv3+", "lmanet", "unet"])
+    parser.add_argument("--base_ch", type=int, default=8)
     parser.add_argument("--data_root", type=str,
                         default="/home/vjti-comp/Downloads/SUGARBEETS_AUGMENTED_DATASET")
     parser.add_argument("--use_rgbnir", action="store_true")
@@ -556,6 +556,7 @@ def main():
     print(f"\n{'='*80}")
     print("[INFO] Running final test evaluation...")
     print(f"{'='*80}\n")
+    # best_ckpt = torch.load("/home/vjti-comp/WEEDSBL/scripts/sota/experiments/sugarbeets_unet_4ch_RGBNIR_20260331_212722/checkpoints/best_model.pth", map_location=device, weights_only=False)
 
     best_ckpt = torch.load(os.path.join(ckpt_dir, "best_model.pth"), map_location=device, weights_only=False)
     model.load_state_dict(best_ckpt["model_state_dict"])

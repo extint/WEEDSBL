@@ -1,0 +1,102 @@
+{
+  "test_metrics": {
+    "pixel_acc": 0.9887359517415314,
+    "mean_acc": 0.9646186047333009,
+    "miou": 0.9056038341501152,
+    "mean_dice": 0.9484663084369757,
+    "mean_f1": 0.9484663084369757,
+    "mean_prec": 0.933726418197888,
+    "mean_rec": 0.9646186047333009,
+    "iou_background": 0.988299327834109,
+    "dice_background": 0.994115236070297,
+    "f1_background": 0.994115236070297,
+    "prec_background": 0.996378234305209,
+    "rec_background": 0.9918624940932712,
+    "spec_background": 0.9599217018236095,
+    "iou_crop": 0.9349331990477914,
+    "dice_crop": 0.9663725853769893,
+    "f1_crop": 0.9663725853769893,
+    "prec_crop": 0.9607682943704754,
+    "rec_crop": 0.972042641168451,
+    "spec_crop": 0.9980373639436657,
+    "iou_weed": 0.7935789755684451,
+    "dice_weed": 0.8849111038636405,
+    "f1_weed": 0.8849111038636405,
+    "prec_weed": 0.8440327259179797,
+    "rec_weed": 0.9299506789381804,
+    "spec_weed": 0.9936904429183784,
+    "loss": 0.1108691732515581,
+    "latency_ms": 4.216359720012406,
+    "params_M": 1.942611
+  },
+  "best_val_miou": 0.9026999371614023,
+  "teacher_params_M": 0.361664,
+  "student_params_M": 1.942611,
+  "teacher_latency_ms": 1.694587059901096,
+  "student_latency_ms": 4.216359720012406,
+  "compression_ratio": 5.371314258538312,
+  "model_config": {
+    "teacher": {
+      "class": "DualEncoderMini",
+      "rgb_base_ch": 16,
+      "nir_base_ch": 8,
+      "aspp_ch": 64,
+      "num_classes": 3,
+      "params_M": 0.361664,
+      "latency_ms": 1.694587059901096,
+      "input_channels": 4
+    },
+    "student": {
+      "class": "UNet",
+      "base_ch": 16,
+      "num_classes": 3,
+      "params_M": 1.942611,
+      "latency_ms": 4.194202739890898,
+      "input_channels": 3
+    },
+    "adapters": "none (plain UNet \u2014 logit KD only)",
+    "distill": {
+      "w_task": 1.0,
+      "w_kd": 0.5,
+      "w_feat": 0.5,
+      "kd_temp": 4.0
+    }
+  },
+  "train_config": {
+    "teacher_ckpt": "/home/vjti-comp/WEEDSBL/scripts/dual_encoder/runs/dual_encoder_mini_20260412_130647/checkpoints/best_model.pth",
+    "data_root": "/home/vjti-comp/Downloads/SUGARBEETS_AUGMENTED_DATASET",
+    "output_dir": "/home/vjti-comp/WEEDSBL/scripts/sota/experiments_distill",
+    "exp_name": "distill_MiniDualEnc_UNet_S16_20260418_023207",
+    "resume": null,
+    "teacher_rgb_base_ch": 16,
+    "teacher_nir_base_ch": 8,
+    "teacher_aspp_ch": 64,
+    "student_base_ch": 16,
+    "height": 640,
+    "width": 640,
+    "batch_size": 4,
+    "num_workers": 4,
+    "epochs": 100,
+    "lr": 0.0003,
+    "warmup_epochs": 5,
+    "min_lr": 1e-06,
+    "w_task": 1.0,
+    "w_kd": 0.5,
+    "w_feat": 0.5,
+    "kd_temp": 4.0,
+    "class_weights": [
+      0.3,
+      1.0,
+      3.0
+    ],
+    "vis_samples": 5,
+    "vis_every": 10,
+    "class_names": [
+      "background",
+      "crop",
+      "weed"
+    ],
+    "teacher": "DualEncoderMini",
+    "student": "UNet"
+  }
+}

@@ -515,8 +515,8 @@ def main():
                         default="/home/vjti-comp/Downloads/SUGARBEETS_AUGMENTED_DATASET")
     parser.add_argument("--use_rgbnir", action="store_true",
                         help="Use RGB+NIR (4ch); default is RGB-only (3ch)")
-    parser.add_argument("--height", type=int, default=966)
-    parser.add_argument("--width",  type=int, default=1296)
+    parser.add_argument("--height", type=int, default=640)
+    parser.add_argument("--width",  type=int, default=640)
     parser.add_argument("--nir_drop", type=float, default=0.0,
                         help="Probability of dropping NIR channel during training")
 

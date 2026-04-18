@@ -129,8 +129,36 @@ class FeatureAdapter(nn.Module):
 # 4. Loss functions
 # =============================================================================
 
+# class TaskLoss(nn.Module):
+#     """CE + Dice + Lovász — same combo as teacher training."""
+#     def __init__(self, class_weights: List[float], num_classes: int = 3):
+#         super().__init__()
+#         w = torch.tensor(class_weights, dtype=torch.float32)
+#         self.register_buffer('w', w)
+#         self.num_classes = num_classes
+
+#     def forward(self, logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+#         # CE
+#         l_ce = F.cross_entropy(logits, targets, weight=self.w)
+#         # Soft Dice
+#         probs = F.softmax(logits, dim=1)
+#         oh    = F.one_hot(targets.clamp(0), self.num_classes).permute(0,3,1,2).float()
+#         inter = (probs * oh).sum((0,2,3))
+#         denom = probs.sum((0,2,3)) + oh.sum((0,2,3))
+#         dice  = 1.0 - (2*inter + 1e-6) / (denom + 1e-6)
+#         l_dice = dice.mean()
+#         # Lovász
+#         B, C, H, W = probs.shape
+#         l_lovasz = _lovasz_softmax(probs.permute(0,2,3,1).reshape(-1, C),
+#                                    targets.reshape(-1))
+#         return l_ce + l_dice + 0.5 * l_lovasz
+
+# updated on 18 april to maintain consistency with other models 
 class TaskLoss(nn.Module):
-    """CE + Dice + Lovász — same combo as teacher training."""
+    """
+    CE + Soft-Dice  (same formula as finetune.py MultiClassDiceLoss,
+    extended with optional per-class weighting for the CE term).
+    """
     def __init__(self, class_weights: List[float], num_classes: int = 3):
         super().__init__()
         w = torch.tensor(class_weights, dtype=torch.float32)
@@ -138,21 +166,18 @@ class TaskLoss(nn.Module):
         self.num_classes = num_classes
 
     def forward(self, logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
-        # CE
         l_ce = F.cross_entropy(logits, targets, weight=self.w)
-        # Soft Dice
-        probs = F.softmax(logits, dim=1)
-        oh    = F.one_hot(targets.clamp(0), self.num_classes).permute(0,3,1,2).float()
-        inter = (probs * oh).sum((0,2,3))
-        denom = probs.sum((0,2,3)) + oh.sum((0,2,3))
-        dice  = 1.0 - (2*inter + 1e-6) / (denom + 1e-6)
-        l_dice = dice.mean()
-        # Lovász
-        B, C, H, W = probs.shape
-        l_lovasz = _lovasz_softmax(probs.permute(0,2,3,1).reshape(-1, C),
-                                   targets.reshape(-1))
-        return l_ce + l_dice + 0.5 * l_lovasz
 
+        probs = F.softmax(logits, dim=1)
+        oh    = F.one_hot(targets.clamp(0), self.num_classes) \
+                 .permute(0, 3, 1, 2).float()
+        dims  = (0, 2, 3)
+        inter = (probs * oh).sum(dims)
+        union = probs.sum(dims) + oh.sum(dims)
+        dice  = 1.0 - (2 * inter + 1e-6) / (union + 1e-6)
+        l_dice = dice.mean()
+
+        return 0.5 * l_ce + 0.5 * l_dice
 
 def _lovasz_grad(gt_sorted):
     gts = gt_sorted.sum()
@@ -501,7 +526,7 @@ def main():
     parser.add_argument('--data_root', type=str,
                         default='/home/vjti-comp/Downloads/SUGARBEETS_AUGMENTED_DATASET')
     parser.add_argument('--output_dir', type=str,
-                        default='/home/vjti-comp/WEEDSBL/scripts/dual_encoder/experiments_distill')
+                        default='/home/vjti-comp/WEEDSBL/scripts/sota/experiments_distill')
     parser.add_argument('--exp_name', type=str, default=None)
     parser.add_argument('--resume', type=str, default=None)
 
@@ -511,7 +536,7 @@ def main():
     parser.add_argument('--teacher_aspp_ch',     type=int, default=64)
 
     # student
-    parser.add_argument('--student_base_ch', type=int, default=8,
+    parser.add_argument('--student_base_ch', type=int, default=16,
                         help='32→~1.9M params; 16→~0.5M params')
 
     # data

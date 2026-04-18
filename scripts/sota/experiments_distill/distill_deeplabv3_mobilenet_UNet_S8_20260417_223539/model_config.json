@@ -1,0 +1,22 @@
+{
+  "teacher": {
+    "class": "deeplabv3_mobilenet",
+    "input_channels": 4,
+    "num_classes": 3,
+    "params_M": 11.020995,
+    "latency_ms": 2.8395143800298683
+  },
+  "student": {
+    "class": "UNet",
+    "base_ch": 8,
+    "input_channels": 3,
+    "num_classes": 3,
+    "params_M": 0.486571,
+    "latency_ms": 2.109029040002497
+  },
+  "distill": {
+    "w_task": 1.0,
+    "w_kd": 0.5,
+    "kd_temp": 4.0
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "teacher": {
+    "class": "DualEncoderMini",
+    "rgb_base_ch": 16,
+    "nir_base_ch": 8,
+    "aspp_ch": 64,
+    "num_classes": 3,
+    "params_M": 0.361664,
+    "latency_ms": 1.7149512376636267,
+    "input_channels": 4
+  },
+  "student": {
+    "class": "UNet",
+    "base_ch": 8,
+    "num_classes": 3,
+    "params_M": 0.486571,
+    "latency_ms": 2.2385912854224443,
+    "input_channels": 3
+  },
+  "adapters": "none (plain UNet \u2014 logit KD only)",
+  "distill": {
+    "w_task": 1.0,
+    "w_kd": 0.5,
+    "w_feat": 0.5,
+    "kd_temp": 4.0
+  }
+}

@@ -1,0 +1,96 @@
+{
+  "test_metrics": {
+    "pixel_acc": 0.9807519124348859,
+    "mean_acc": 0.9164517041721193,
+    "miou": 0.8348792848174081,
+    "mean_dice": 0.9044201735230515,
+    "mean_f1": 0.9044201735230515,
+    "mean_prec": 0.8940057589937478,
+    "mean_rec": 0.9164517041721193,
+    "iou_background": 0.9825769511382342,
+    "dice_background": 0.9912119179778807,
+    "f1_background": 0.9912119179778807,
+    "prec_background": 0.9929312257483524,
+    "rec_background": 0.9894985540421622,
+    "spec_background": 0.923392589723726,
+    "iou_crop": 0.8554903706366228,
+    "dice_crop": 0.922117823056233,
+    "f1_crop": 0.922117823056233,
+    "prec_crop": 0.9302451032243406,
+    "rec_crop": 0.914131324275155,
+    "spec_crop": 0.9964585700819469,
+    "iou_weed": 0.6665705326773674,
+    "dice_weed": 0.7999307795350409,
+    "f1_weed": 0.7999307795350409,
+    "prec_weed": 0.7588409480085503,
+    "rec_weed": 0.845725234199041,
+    "spec_weed": 0.9902276441142173,
+    "loss": 0.2049810390919447,
+    "latency_ms": 2.3838139200233854,
+    "params_M": 0.486571
+  },
+  "best_val_miou": 0.8367932670878012,
+  "teacher_params_M": 11.020995,
+  "student_params_M": 0.486571,
+  "teacher_latency_ms": 2.8395143800298683,
+  "student_latency_ms": 2.3838139200233854,
+  "compression_ratio": 0.044149462004111246,
+  "model_config": {
+    "teacher": {
+      "class": "deeplabv3_mobilenet",
+      "input_channels": 4,
+      "num_classes": 3,
+      "params_M": 11.020995,
+      "latency_ms": 2.8395143800298683
+    },
+    "student": {
+      "class": "UNet",
+      "base_ch": 8,
+      "input_channels": 3,
+      "num_classes": 3,
+      "params_M": 0.486571,
+      "latency_ms": 2.109029040002497
+    },
+    "distill": {
+      "w_task": 1.0,
+      "w_kd": 0.5,
+      "kd_temp": 4.0
+    }
+  },
+  "train_config": {
+    "teacher_ckpt": "/home/vjti-comp/WEEDSBL/scripts/sota/experiments/sugarbeets_deeplabv3_mobilenet_4ch_RGBNIR_20260413_000804/checkpoints/best_model.pth",
+    "data_root": "/home/vjti-comp/Downloads/SUGARBEETS_AUGMENTED_DATASET",
+    "output_dir": "/home/vjti-comp/WEEDSBL/scripts/sota/experiments_distill",
+    "exp_name": "distill_deeplabv3_mobilenet_UNet_S8_20260417_223539",
+    "resume": null,
+    "teacher_arch": "deeplabv3_mobilenet",
+    "teacher_rgbnir": true,
+    "student_base_ch": 8,
+    "height": 640,
+    "width": 640,
+    "batch_size": 4,
+    "num_workers": 4,
+    "epochs": 100,
+    "lr": 0.0003,
+    "warmup_epochs": 5,
+    "min_lr": 1e-06,
+    "weight_decay": 0.0001,
+    "w_task": 1.0,
+    "w_kd": 0.5,
+    "kd_temp": 4.0,
+    "class_weights": [
+      0.3,
+      1.0,
+      3.0
+    ],
+    "vis_samples": 5,
+    "vis_every": 10,
+    "class_names": [
+      "background",
+      "crop",
+      "weed"
+    ],
+    "teacher": "deeplabv3_mobilenet",
+    "student": "UNet"
+  }
+}

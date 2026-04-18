@@ -1639,7 +1639,7 @@ class Down(nn.Module):
     def __init__(self, in_ch: int, out_ch: int):
         super().__init__()
         self.pool = nn.MaxPool2d(2)
-        self.conv = DoubleConv(in_ch, out_ch)
+        self.conv = UNetDoubleConv(in_ch, out_ch)
 
     def forward(self, x):
         return self.conv(self.pool(x))
